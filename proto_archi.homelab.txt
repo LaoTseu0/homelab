@@ -1,0 +1,47 @@
+Le GPU confirmé (RTX 2060 6 Go / 32 Go RAM / Ryzen 5) débloque le choix de modèle — j'y viens. Mais tu cites plusieurs standards/outils récents que je ne veux pas te décrire de mémoire (OKF, Pi.dev, Hermes…). Je vérifie avant de trancher.OKF confirmé et très pertinent pour toi. Maintenant je vérifie les outils d'orchestration que tu cites (Pi.dev, Hermes) et l'état de Matter/ESP32.OpenClaw se confirme au passage (il est bâti sur le SDK de Pi). Reste « Hermes » et l'état de Matter/ESP32.Reste l'état de Matter et des satellites ESP32.Le GPU confirmé (RTX 2060 6 Go, 32 Go RAM, Ryzen 5) et tes pistes tombent bien : presque tout ce que tu cites est réel, récent, et — bonne surprise — **converge vers le même socle : du markdown + git**. Je t'oriente point par point, puis je consolide dans la v2 du document.
+
+## 1. Le modèle sur ta RTX 2060 (6 Go)
+
+C'est tranché : **Qwen3 4B Instruct** (avec *tool calling*) est le point de départ. Il rentre à l'aise, laisse de la place pour faster-whisper, et pilote bien HA. Whisper tournera soit sur le GPU en petit modèle (int8), soit sur le **CPU** (ton Ryzen 5 + 32 Go de RAM encaisse ça). Gemma 4 12B Q4 (~6 Go) remplit toute la carte — jouable mais ça ne laisse rien pour Whisper en simultané → à réserver pour quand tu passeras à un GPU plus gros (ton « scale vertical »). Pour la **domotique**, 6 Go suffisent largement. Pour le **dev Three.js**, un modèle 4B local sera faible — c'est le cas d'usage qui justifiera plus tard un meilleur GPU **ou** un fallback cloud.
+
+## 2. ESP32 & Matter — deux sujets distincts
+
+**Les satellites ESP32** : le **ESP32-S3** est le standard pour un satellite vocal/écran, avec détection du wake word « Hey Jarvis » directement sur la puce en 2026. Attention au choix de puce : pour un satellite vocal/affichage/audio, c'est l'ESP32-S3 ; mais pour du Thread/Matter il faut un ESP32-C6 ou ESP32-H2, seuls à embarquer la radio 802.15.4. Le **ESP32-S3-BOX-3** est l'option clé-en-main (écran + HP + micro, firmware HA officiel, ~15 min), mais son duo de micros est moins bon en champ lointain que les matrices 4 micros XMOS. Donc pour tes pièces exigeantes, ton **XVF3800 reste supérieur** ; les ESP32-S3-BOX sont parfaits pour des pièces secondaires à petit budget.
+
+**Matter/Thread**, c'est la couche **domotique** (ampoules, capteurs), pas la couche voix. Le satellite n'est qu'un point audio (Wyoming) ; Matter, Zigbee, Thread, Z-Wave vivent tous côté serveur HA. Matter est l'avenir, mais encore en territoire « early adopter » (multicast IPv6 requis, soucis de commissioning). Pragmatique pour démarrer : **Zigbee** (via un coordinateur) reste le plus mûr, et tu ajoutes du Matter au fur et à mesure. Le choix du protocole est **indépendant** de tout le reste de Jarvis.
+
+## 3. La mémoire persistante — ton instinct est excellent
+
+Tu as déjà, sans le savoir, la bonne architecture avec ton `memoire-agent.git`. Le standard Google que tu cites, **OKF**, formalise exactement ce pattern : l'Open Knowledge Format, publié par Google Cloud le 12 juin 2026, représente la connaissance comme un répertoire de fichiers markdown avec frontmatter YAML — un concept par fichier, seul le champ `type` est requis, sans SDK ni runtime propriétaire. Il **complète** MCP : MCP gère l'accès de l'agent aux outils/données, OKF décrit la connaissance elle-même — un serveur MCP peut exposer un bundle OKF.
+
+Combo idéal pour toi : **fichiers .md (convention OKF) + Obsidian** comme éditeur/graphe humain + **git sur ton NAS** pour versionner/synchroniser + exposition aux agents via **MCP**. Tout reste local, lisible, portable. Ne sur-ingénierie pas : OKF est en v0.1, « point de départ » — adopte juste la convention frontmatter.
+
+## 4. L'orchestration — c'est un **deuxième cerveau**, à côté de HA
+
+Point clé : **HA + Ollama = cerveau voix/domotique**, ce n'est pas de l'orchestration agentique. Ce que tu veux (assistant de tâches info, dev, actions sur le homelab) est une **couche séparée et complémentaire**, reliée à HA par MCP. Tes deux pistes sont réelles :
+
+- **Hermes Agent** (Nous Research, févr. 2026) : agent autonome persistant, auto-hébergé, à mémoire profonde et compétences réutilisables, *model-agnostic*. Son innovation : le « profile » = une identité d'agent complète distribuée comme **dépôt git** (infra-as-code). → le plus aligné avec ta philosophie git + modèles locaux.
+- **Pi (pi.dev)** : harnais d'agent de code minimal (4 outils, MIT) de Mario Zechner ; **OpenClaw est bâti sur son SDK**. → plutôt orienté **dev/coding** sur le homelab.
+- **OpenClaw** : viral mais un cauchemar de sécurité (≈138 CVE début 2026). À éviter, ou uniquement lourdement sandboxé.
+
+⚠️ **Sécurité, non négociable** : un agent autonome avec accès `bash` sur ta box homelab (qui héberge SSH, git, les fichiers d'Océane…) est un vrai risque. Moindre privilège, sandbox, aucun outil destructif sans validation humaine, rien d'exposé à Internet (cohérent avec ta posture réseau local).
+
+**Recommandation** : pour un « Jarvis » persistant et git-natif → **Hermes** ; si le focus devient le dev/code → **Pi**. Les deux sont *model-agnostic*, donc tu peux router les tâches lourdes (Three.js) vers un gros modèle plus tard **sans ré-architecturer**.
+
+## 5. Veille communauté
+
+Sources à suivre : r/homeassistant, r/LocalLLaMA, r/selfhosted, le forum HA (section Voice), le blog HA (séries « Voice Chapter » / « Meet Nabu »), la communauté ESPHome, le wiki Seeed, et côté agents les dépôts GitHub de Pi/Hermes + les annonces OKF. Astuce : tiens ta veille **dans ton vault Obsidian** (une note OKF `type: watch` par techno) — ta veille devient elle-même de la mémoire agent.
+
+---
+
+Je plie tout ça dans la **v2** du document.Voilà la **v2**, qui intègre tout : le modèle sur ta 2060, le modèle « deux cerveaux + mémoire partagée », la couche mémoire OKF/Obsidian/git, l'orchestration Hermes/Pi (avec les garde-fous sécurité), et le volet ESP32/Matter.
+
+Les trois idées à retenir, si tu ne devais garder que ça :
+
+**Tout converge vers markdown + git.** Ta mémoire (OKF), tes profils d'agent (Hermes = dépôt git), ta config, ta veille (Obsidian) — même substrat. Ton `memoire-agent.git` était déjà la bonne intuition ; tu ne fais que l'officialiser.
+
+**Deux cerveaux, pas un.** Home Assistant + Ollama pour la voix/domotique (rapide, borné), et Hermes/Pi pour les tâches agentiques (autonome, mémoire longue), reliés par MCP. Ne pas confondre les deux évite de demander à HA de faire de l'orchestration, et à l'agent de faire du temps-réel domotique.
+
+**La sécurité de la couche agentique est le vrai point dur.** Un agent avec `bash` sur ta box homelab, c'est puissant mais dangereux — sandbox, moindre privilège, pas d'outil destructif, rien exposé au web. C'est là qu'il faut être rigoureux, plus encore que sur le choix du modèle.
+
+Deux questions restent ouvertes avant la Phase 0 : la **variante exacte de ton XVF3800** (USB vs ESP32-S3/ESPHome), et **HA en VM ou en conteneur** sur le PC. Dis-moi, et je t'écris la fiche d'install concrète de la Phase 0.
