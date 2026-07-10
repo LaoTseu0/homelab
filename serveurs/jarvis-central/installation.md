@@ -1,9 +1,9 @@
-# Installation du serveur dédié Jarvis
+# jarvis-central — installation du socle
 
 > Comment monter le serveur dédié qui héberge Jarvis : OS headless, drivers
 > GPU, Docker et accès GPU depuis les conteneurs
 > (vieux PC gamer — RTX 2060 6 Go, 32 Go RAM, Ryzen 5).
-> Correspond au début de la **Phase 0** de [jarvis-maison-architecture.md](jarvis-maison-architecture.md).
+> Correspond au début de la **Phase 0** de [../../architecture/jarvis.md](../../architecture/jarvis.md).
 > Dernière mise à jour : 10 juillet 2026
 > Statut : **socle opérationnel** (OS + GPU + Docker + accès GPU conteneurs validé)
 
@@ -131,4 +131,4 @@ Affiche le même tableau que le `nvidia-smi` de l'hôte → le GPU est accessibl
 depuis les conteneurs. ✅ Validé.
 
 > L'état final du socle et les services qui tournent dessus sont décrits dans
-> [jarvis-body.md](jarvis-body.md).
+> [etat.md](etat.md).

@@ -1,5 +1,5 @@
 # Jarvis — corps principal en config-as-code
-# Décrit les 5 conteneurs du serveur jarvis-central (voir jarvis-body.md).
+# Décrit les 5 conteneurs du serveur jarvis-central (voir etat.md).
 # Emplacement sur le serveur : /srv/jarvis/docker-compose.yml
 # Lancement : docker compose up -d
 

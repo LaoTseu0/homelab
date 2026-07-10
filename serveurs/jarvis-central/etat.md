@@ -1,15 +1,13 @@
-# Jarvis Body — le corps principal du setup
+# jarvis-central — état courant
 
-> État courant du serveur `jarvis-central` : le socle système et les services
-> qui tournent dessus. C'est la photographie du « corps » de Jarvis — ce qui
-> est installé, comment, et pourquoi.
-> L'installation du socle lui-même est décrite dans
-> [installation-serveur-jarvis.md](installation-serveur-jarvis.md) ;
-> l'architecture cible dans [jarvis-maison-architecture.md](jarvis-maison-architecture.md).
+> Photographie du serveur `jarvis-central` : le socle système, les services
+> qui tournent dessus, où vit chaque chose et pourquoi.
+> L'installation du socle est décrite dans [installation.md](installation.md) ;
+> l'architecture cible dans [../../architecture/jarvis.md](../../architecture/jarvis.md) ;
+> la posture de sécurité dans [../../architecture/securite.md](../../architecture/securite.md).
 > Dernière mise à jour : 10 juillet 2026
-> Statut : **pipeline vocal complet côté serveur** (STT + LLM + TTS + wake
-> word branchés dans HA), géré en config-as-code via docker compose — il ne
-> manque que les oreilles physiques (satellite)
+> Statut : **Phase 0 terminée** 🎉 — boucle vocale complète validée
+> (« Hey Jarvis » → Whisper → Qwen3 → Piper → enceinte), 100 % local
 
 ---
 
@@ -17,18 +15,21 @@
 
 ```
 Ubuntu Server 26.04 LTS (headless, SSH)
- └── Driver NVIDIA (RTX 2060 visible : nvidia-smi)
-      └── Docker (groupe docker → sans sudo)
-           └── NVIDIA Container Toolkit (--gpus all fonctionnel)
-                ├── [conteneur] ollama          (port 11434, GPU)
-                ├── [conteneur] homeassistant   (port 8123, network host)
-                ├── [conteneur] whisper         (port 10300, STT, CPU)
-                ├── [conteneur] piper           (port 10200, TTS, CPU)
-                └── [conteneur] openwakeword    (port 10400, wake word, CPU)
+ ├── Driver NVIDIA (RTX 2060 visible : nvidia-smi)
+ │    └── Docker (groupe docker → sans sudo)
+ │         └── NVIDIA Container Toolkit (--gpus all fonctionnel)
+ │              ├── [conteneur] ollama          (port 11434, GPU)
+ │              ├── [conteneur] homeassistant   (port 8123, network host)
+ │              ├── [conteneur] whisper         (port 10300, STT, CPU)
+ │              ├── [conteneur] piper           (port 10200, TTS, CPU)
+ │              └── [conteneur] openwakeword    (port 10400, wake word, CPU)
+ └── wyoming-satellite (sur l'hôte, port 10700 — exception justifiée, §2.4)
 ```
 
-Tout service de Jarvis est un conteneur posé sur ce socle — rien n'est
-installé directement sur l'hôte à part Docker et le driver GPU.
+Règle : tout service de Jarvis est un conteneur posé sur ce socle — rien
+n'est installé directement sur l'hôte à part le driver GPU, Docker,
+`alsa-utils` et **une exception documentée** (wyoming-satellite, §2.4).
+Le détail des emplacements disque est en §4.
 
 **Les 5 conteneurs sont gérés par docker compose** : le fichier
 [docker-compose.yml](docker-compose.yml) (versionné dans ce repo, copie sur
@@ -199,12 +200,64 @@ Voix → texte = faster-whisper, Texte → voix = piper
 > (couplé au réglage BIOS « Power On after AC loss »). Un conteneur arrêté
 > à la main reste arrêté.
 
+### 2.4 wyoming-satellite — le pont micro/enceinte → HA (port 10700)
+
+⚠️ **Seule brique installée sur l'hôte, pas en conteneur.** Deux raisons :
+l'image Docker officielle a un historique capricieux avec l'audio
+(`/dev/snd`, alsa-utils manquants), et ce composant est **temporaire** sur
+le serveur — en Phase 1, le satellite déménage sur le Pi 5 ou un ESP32.
+Pas la peine d'industrialiser un banc d'essai.
+
+**Matériel** : ReSpeaker **XVF3800 en USB** (variante USB Audio — question
+ouverte n°1 de l'architecture **tranchée** : la carte apparaît dans `lsusb`
+et comme carte ALSA `plughw:2,0`). Alimentée par le port USB, enceinte
+branchée sur sa sortie audio (indispensable : l'annulation d'écho de la puce
+XMOS doit « entendre » ce que l'enceinte joue).
+
+**Installation** (méthode officielle du dépôt) :
+
+```bash
+sudo apt install -y python3-venv git
+git clone https://github.com/rhasspy/wyoming-satellite.git ~/wyoming-satellite
+cd ~/wyoming-satellite && script/setup
+```
+
+**Lancement** (manuel pour l'instant — service systemd au
+[backlog](../../backlog.md)) :
+
+```bash
+cd ~/wyoming-satellite
+script/run \
+  --name 'bureau' \
+  --uri 'tcp://0.0.0.0:10700' \
+  --mic-command 'arecord -D plughw:2,0 -r 16000 -c 1 -f S16_LE -t raw' \
+  --snd-command 'aplay -D plughw:2,0 -r 22050 -c 1 -f S16_LE -t raw' \
+  --wake-uri 'tcp://127.0.0.1:10400' \
+  --wake-word-name 'hey_jarvis'
+```
+
+Le satellite capte le micro, envoie le flux au conteneur openwakeword
+(10400) pour la détection, streame la suite vers HA, et joue la réponse.
+
+**Côté HA** : intégration Wyoming Protocol (`127.0.0.1:10700`) → appareil
+« bureau », traitement **local complet** (ni cloud, ni Speech-to-Phrase),
+assistant Jarvis-HA, voix `siwis (medium)`.
+
+✅ Validé : boucle complète « Hey Jarvis, c'est quoi l'hydrogène ? » →
+réponse parlée dans l'enceinte, 100 % local. **Fin de la Phase 0.**
+
+> Prononciation : le modèle `hey_jarvis` est entraîné sur des voix
+> anglaises — « héï djarvis » passe bien mieux qu'un « hé Jarvis » à la
+> française. Pour tout diagnostic :
+> [guide de debug du pipeline vocal](../../guides/debug-pipeline-vocal.md).
+
 ---
 
 ## 3. Modèle mental — qui parle à qui
 
 ```
-[ Satellites (à venir) ] ──audio/Wyoming──► [ Home Assistant :8123 ]
+[ Satellite « bureau » ]
+[ XVF3800 USB + enceinte ] ──audio/Wyoming──► [ Home Assistant :8123 ]
                                               │  commandes simples : intents
                                               │  locaux (~200 ms, sans LLM)
                                               │  raisonnement :
@@ -217,3 +270,30 @@ Voix → texte = faster-whisper, Texte → voix = piper
 - Les satellites ne connaissent **que** HA.
 - Ollama est le moteur commun des deux cerveaux.
 - Le pont HA ↔ agent (MCP) viendra en Phase 3.
+
+---
+
+## 4. Organisation du disque — où vit quoi, et pourquoi là
+
+Convention générale : **`/srv`** pour tout ce qui appartient aux *services*
+de la machine (c'est son rôle dans le standard FHS : « données servies par
+le système »), **`/home/jarvis`** pour ce qui est expérimental ou temporaire,
+**volumes Docker** pour les données gérées par Docker qu'on n'a jamais
+besoin de toucher directement. Même logique que le NAS (`/srv/git`,
+`/srv/partages`).
+
+| Emplacement | Contenu | Pourquoi là |
+|---|---|---|
+| `/srv/jarvis/docker-compose.yml` | Définition des 5 conteneurs | Config de service → `/srv` ; hors de `/home` car indépendante de tout utilisateur. Copie déployée du fichier versionné dans ce repo (source de vérité). |
+| `/srv/homeassistant/` | Config complète de HA (bind mount `/config`) | Donnée de service critique → `/srv` ; en bind mount (pas en volume) pour être lisible, éditable et **sauvegardable** directement — c'est la cible n°1 des futurs backups. |
+| `/srv/wyoming/whisper/`, `/srv/wyoming/piper/` | Modèles STT/TTS téléchargés (bind mounts `/data`) | Même logique : données de service, regroupées sous un parent `wyoming/` commun. Re-téléchargeables, mais autant ne pas le refaire à chaque recréation de conteneur. |
+| volume Docker `ollama` | Modèles LLM (~Go de blobs binaires) | Volume nommé géré par Docker : aucun besoin d'accès direct par l'humain, contenu re-téléchargeable à l'identique (`ollama pull`). Exception assumée à la règle bind mount. |
+| `/home/jarvis/wyoming-satellite/` | Clone git + venv du satellite | Composant **temporaire** (part sur Pi 5/ESP32 en Phase 1) et installé hors Docker → statut expérimental, donc `/home` et pas `/srv`. S'il devenait permanent, il faudrait le promouvoir (conteneur ou `/srv` + systemd). |
+| `/etc/docker/daemon.json` | Déclaration du runtime NVIDIA à Docker | Généré par `nvidia-ctk runtime configure` — config système, emplacement imposé. |
+| `/etc/apt/sources.list.d/*.list`, `/usr/share/keyrings/*.gpg` | Dépôts apt Docker et NVIDIA + leurs clés | Emplacements standard d'apt pour les dépôts tiers signés. |
+
+Corollaire important : **les conteneurs sont jetables, ces emplacements ne le
+sont pas.** `docker rm` / recréation / mise à jour ne touchent à rien de
+cette table. Ce qui doit être sauvegardé un jour : `/srv/homeassistant`
+(critique, non reconstructible) ; tout le reste se retélécharge ou se
+reclone.
