@@ -1,0 +1,74 @@
+# Jarvis — corps principal en config-as-code
+# Décrit les 5 conteneurs du serveur jarvis-central (voir jarvis-body.md).
+# Emplacement sur le serveur : /srv/jarvis/docker-compose.yml
+# Lancement : docker compose up -d
+
+name: jarvis
+
+services:
+
+  # Moteur LLM (GPU) — partagé entre HA et la future couche agentique
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Chef d'orchestre voix/domotique
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - /srv/homeassistant:/config
+
+  # STT — voix vers texte (CPU)
+  whisper:
+    image: rhasspy/wyoming-whisper
+    container_name: whisper
+    restart: unless-stopped
+    ports:
+      - "10300:10300"
+    volumes:
+      - /srv/wyoming/whisper:/data
+    command: --model small-int8 --language fr
+
+  # TTS — texte vers voix (CPU)
+  piper:
+    image: rhasspy/wyoming-piper
+    container_name: piper
+    restart: unless-stopped
+    ports:
+      - "10200:10200"
+    volumes:
+      - /srv/wyoming/piper:/data
+    command: --voice fr_FR-siwis-medium
+
+  # Détection du mot de réveil « Hey Jarvis » (CPU)
+  openwakeword:
+    image: rhasspy/wyoming-openwakeword
+    container_name: openwakeword
+    restart: unless-stopped
+    ports:
+      - "10400:10400"
+    command: --preload-model 'hey_jarvis'
+
+volumes:
+  # Volume existant (créé lors du premier docker run) : les modèles Ollama
+  # déjà téléchargés sont réutilisés tels quels.
+  ollama:
+    external: true

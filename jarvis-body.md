@@ -7,7 +7,9 @@
 > [installation-serveur-jarvis.md](installation-serveur-jarvis.md) ;
 > l'architecture cible dans [jarvis-maison-architecture.md](jarvis-maison-architecture.md).
 > Dernière mise à jour : 10 juillet 2026
-> Statut : **cerveau LLM opérationnel, validé en texte via Home Assistant**
+> Statut : **pipeline vocal complet côté serveur** (STT + LLM + TTS + wake
+> word branchés dans HA), géré en config-as-code via docker compose — il ne
+> manque que les oreilles physiques (satellite)
 
 ---
 
@@ -19,11 +21,30 @@ Ubuntu Server 26.04 LTS (headless, SSH)
       └── Docker (groupe docker → sans sudo)
            └── NVIDIA Container Toolkit (--gpus all fonctionnel)
                 ├── [conteneur] ollama          (port 11434, GPU)
-                └── [conteneur] homeassistant   (port 8123, network host)
+                ├── [conteneur] homeassistant   (port 8123, network host)
+                ├── [conteneur] whisper         (port 10300, STT, CPU)
+                ├── [conteneur] piper           (port 10200, TTS, CPU)
+                └── [conteneur] openwakeword    (port 10400, wake word, CPU)
 ```
 
 Tout service de Jarvis est un conteneur posé sur ce socle — rien n'est
 installé directement sur l'hôte à part Docker et le driver GPU.
+
+**Les 5 conteneurs sont gérés par docker compose** : le fichier
+[docker-compose.yml](docker-compose.yml) (versionné dans ce repo, copie sur
+le serveur dans `/srv/jarvis/`) est la source de vérité. Les commandes
+`docker run` détaillées plus bas sont leurs équivalents unitaires, gardées
+pour expliquer chaque option.
+
+```bash
+cd /srv/jarvis
+docker compose up -d      # (re)lance tout le corps de Jarvis
+docker compose pull && docker compose up -d   # met tout à jour
+docker compose down       # arrête tout
+```
+
+Les données vivent hors des conteneurs (volume `ollama`, `/srv/homeassistant`,
+`/srv/wyoming/`) : détruire/recréer les conteneurs ne perd rien.
 
 ---
 
@@ -116,11 +137,67 @@ docker run -d \
    URL `http://127.0.0.1:11434`, modèle `qwen3:4b-instruct-2507-q4_K_M`,
    contrôle de HA (tool calling) activé.
 3. Assistant **« Jarvis »** créé (Paramètres → Assistants vocaux) — langue
-   français, agent de conversation = Ollama. STT/TTS vides pour l'instant
-   (briques Wyoming pas encore installées).
+   **français** (conditionne les intents locaux et la langue de Whisper),
+   agent de conversation = Ollama.
+4. **Instructions personnalisées** (intégration Ollama → « Configurer » →
+   champ « Instructions ») : le template par défaut étant en anglais, le 4B
+   répondait en anglais. Consigne ajoutée en tête du template :
+   > Tu es Jarvis, l'assistant vocal de la maison. Réponds toujours en
+   > français, de façon brève et directe (tes réponses sont lues à voix
+   > haute).
+   Les réponses courtes comptent : chaque phrase sera prononcée par Piper.
 
 ✅ Validé : conversation en texte via le chat Assist (bulle en haut à droite),
 réponse en ~1 s, modèle bien chargé en VRAM pendant la génération.
+
+### 2.3 Briques Wyoming — les oreilles, la bouche et le réveil
+
+Trois services distincts reliés à HA par le protocole **Wyoming** (une
+intégration « Wyoming Protocol » par service, hôte `127.0.0.1`).
+Tous tournent sur **CPU** (Ryzen 5 + 32 Go) pour garder la VRAM au LLM.
+
+**faster-whisper — STT, voix → texte (port 10300) :**
+
+```bash
+docker run -d --name whisper --restart unless-stopped \
+  -p 10300:10300 \
+  -v /srv/wyoming/whisper:/data \
+  rhasspy/wyoming-whisper \
+  --model small-int8 --language fr
+```
+
+**Piper — TTS, texte → voix (port 10200) :**
+
+```bash
+docker run -d --name piper --restart unless-stopped \
+  -p 10200:10200 \
+  -v /srv/wyoming/piper:/data \
+  rhasspy/wyoming-piper \
+  --voice fr_FR-siwis-medium
+```
+
+**openWakeWord — détection de « Hey Jarvis » (port 10400) :**
+
+```bash
+docker run -d --name openwakeword --restart unless-stopped \
+  -p 10400:10400 \
+  rhasspy/wyoming-openwakeword \
+  --preload-model 'hey_jarvis'
+```
+
+> openWakeWord n'apparaît pas comme « marque » propre dans HA : les trois
+> briques s'ajoutent via la même intégration **Wyoming Protocol** (ports
+> 10300 / 10200 / 10400). Le wake word se choisira au niveau de chaque
+> satellite, pas dans la config de l'assistant.
+
+**Configuration de l'assistant** (Paramètres → Assistants vocaux → Jarvis) :
+Voix → texte = faster-whisper, Texte → voix = piper
+(voix `fr_FR-siwis-medium`).
+
+> Politique de redémarrage : tous les conteneurs sont en `--restart
+> unless-stopped` → tout revient seul après reboot ou coupure de courant
+> (couplé au réglage BIOS « Power On after AC loss »). Un conteneur arrêté
+> à la main reste arrêté.
 
 ---
 
