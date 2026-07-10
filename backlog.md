@@ -58,8 +58,9 @@
 - [ ] (Optionnel) Passphrase sur la clé SSH du PC principal.
 - [ ] (Optionnel) Découper plus finement la doc NAS si elle grossit.
 
-## Réseau
+## Réseau (voir architecture/reseau.md)
 
-- [ ] **IP fixes** (réservation DHCP box Free) pour jarvis-central, le NAS et
-      les futurs satellites.
+- [ ] **Réservations DHCP** (box Free) pour `nas` (192.168.1.80) et
+      `jarvis-central` (192.168.1.57) — les IP sont documentées mais non
+      garanties tant que ce n'est pas fait.
 - [ ] Lien RDC↔étage : surveiller la fiabilité WiFi, Ethernet/CPL à terme.

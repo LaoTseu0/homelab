@@ -36,6 +36,10 @@ Host nas
 
 Connexion simplifiée : `ssh nas`
 
+> Depuis une **machine** (config de service, script) : utiliser l'IP du NAS
+> plutôt que `nas.local` — convention et adresses dans
+> [../../architecture/reseau.md](../../architecture/reseau.md).
+
 ---
 
 ## 3. Serveur git
