@@ -8,18 +8,22 @@
 
 ## Jarvis — finitions Phase 0
 
-- [ ] **Service systemd pour wyoming-satellite** — aujourd'hui lancé à la main
-      (`script/run`), il meurt avec la session SSH. À pérenniser.
+- [ ] **Accès git du serveur au NAS** : compte dédié dans le groupe `agents`
+      sur le NAS + clé SSH de jarvis-central, puis `git clone
+      nas:/srv/git/homelab.git ~/homelab` — fin du scp artisanal.
+- [ ] **Exécuter `deploiement/jarvis-central/installer.sh`** sur le serveur :
+      déploie le compose et le service systemd du satellite depuis le repo
+      (fichiers prêts et versionnés — reste à exécuter).
 - [ ] **Rattacher l'appareil « bureau » au pipeline Jarvis-HA** et vérifier que
       les instructions (français, réponses brèves) s'appliquent bien en vocal
       (réponse « hydrogène » trop longue lors du test).
 - [ ] **Trancher le `--mic-volume-multiplier`** — tests à différentes distances,
-      avec `--debug-recording-dir` pour écouter ce que Whisper reçoit.
-- [ ] **Retirer les flags de debug** (`--debug`, `--debug-probability`) de la
-      config une fois les réglages stabilisés.
-- [ ] **Circuit git propre repo → serveur** : cloner `homelab.git` sur
-      jarvis-central (accès au NAS), déployer le compose depuis le repo —
-      fin du scp artisanal et des configs qui divergent.
+      avec `--debug-recording-dir` pour écouter ce que Whisper reçoit ; reporter
+      la décision dans `wyoming-satellite.service` (repo).
+- [ ] **Retirer les flags de debug** (`--debug-probability` sur openwakeword)
+      de la config une fois les réglages stabilisés — NB : le compose du repo
+      ne les a jamais eus, celui du serveur a divergé → l'installer.sh remettra
+      le serveur en conformité.
 
 ## Sécurité — must-have (voir architecture/securite.md §3)
 

@@ -18,6 +18,7 @@
 |---|---|---|
 | [architecture/](architecture/) | Ce qu'on construit et pourquoi : cible, stratégie, sécurité | Stable |
 | [serveurs/](serveurs/) | Un dossier par machine : `installation.md` (comment ça a été monté) et `etat.md` (ce qui tourne aujourd'hui) | Vivant |
+| [deploiement/](deploiement/) | Config **déployable** par machine (compose, services systemd, installeur) — pas de la doc : des fichiers que le serveur exécute | Vivant |
 | [guides/](guides/) | Savoir-faire réutilisable (debug, procédures) | Enrichi au fil de l'eau |
 | [backlog.md](backlog.md) | Tout ce qui reste à faire, par thème | Vivant |
 | [archives/](archives/) | Documents historiques, gardés pour mémoire | Figé |

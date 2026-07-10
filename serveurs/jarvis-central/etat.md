@@ -32,8 +32,10 @@ n'est installé directement sur l'hôte à part le driver GPU, Docker,
 Le détail des emplacements disque est en §4.
 
 **Les 5 conteneurs sont gérés par docker compose** : le fichier
-[docker-compose.yml](docker-compose.yml) (versionné dans ce repo, copie sur
-le serveur dans `/srv/jarvis/`) est la source de vérité. Les commandes
+[docker-compose.yml](../../deploiement/jarvis-central/docker-compose.yml)
+versionné dans [deploiement/jarvis-central/](../../deploiement/jarvis-central/)
+est la source de vérité ; il est copié vers `/srv/jarvis/` par
+[installer.sh](../../deploiement/jarvis-central/installer.sh). Les commandes
 `docker run` détaillées plus bas sont leurs équivalents unitaires, gardées
 pour expliquer chaque option.
 
@@ -222,18 +224,16 @@ git clone https://github.com/rhasspy/wyoming-satellite.git ~/wyoming-satellite
 cd ~/wyoming-satellite && script/setup
 ```
 
-**Lancement** (manuel pour l'instant — service systemd au
-[backlog](../../backlog.md)) :
+**Lancement** : service systemd
+[`wyoming-satellite.service`](../../deploiement/jarvis-central/wyoming-satellite.service)
+(versionné dans `deploiement/`, installé par `installer.sh`), qui exécute
+`script/run` avec le micro/enceinte sur `plughw:2,0`, le wake word délégué
+au conteneur openwakeword (10400), et `Restart=always`.
 
 ```bash
-cd ~/wyoming-satellite
-script/run \
-  --name 'bureau' \
-  --uri 'tcp://0.0.0.0:10700' \
-  --mic-command 'arecord -D plughw:2,0 -r 16000 -c 1 -f S16_LE -t raw' \
-  --snd-command 'aplay -D plughw:2,0 -r 22050 -c 1 -f S16_LE -t raw' \
-  --wake-uri 'tcp://127.0.0.1:10400' \
-  --wake-word-name 'hey_jarvis'
+systemctl status wyoming-satellite     # état
+journalctl -u wyoming-satellite -f     # logs en direct
+sudo systemctl restart wyoming-satellite
 ```
 
 Le satellite capte le micro, envoie le flux au conteneur openwakeword
@@ -284,7 +284,8 @@ besoin de toucher directement. Même logique que le NAS (`/srv/git`,
 
 | Emplacement | Contenu | Pourquoi là |
 |---|---|---|
-| `/srv/jarvis/docker-compose.yml` | Définition des 5 conteneurs | Config de service → `/srv` ; hors de `/home` car indépendante de tout utilisateur. Copie déployée du fichier versionné dans ce repo (source de vérité). |
+| `/srv/jarvis/docker-compose.yml` | Définition des 5 conteneurs | Config de service → `/srv` ; hors de `/home` car indépendante de tout utilisateur. **Copie** déployée par `installer.sh` — la source de vérité est `deploiement/jarvis-central/` dans ce repo. |
+| `/etc/systemd/system/wyoming-satellite.service` | Service du satellite vocal | Emplacement imposé par systemd. **Copie** déployée par `installer.sh` — source de vérité dans le repo. |
 | `/srv/homeassistant/` | Config complète de HA (bind mount `/config`) | Donnée de service critique → `/srv` ; en bind mount (pas en volume) pour être lisible, éditable et **sauvegardable** directement — c'est la cible n°1 des futurs backups. |
 | `/srv/wyoming/whisper/`, `/srv/wyoming/piper/` | Modèles STT/TTS téléchargés (bind mounts `/data`) | Même logique : données de service, regroupées sous un parent `wyoming/` commun. Re-téléchargeables, mais autant ne pas le refaire à chaque recréation de conteneur. |
 | volume Docker `ollama` | Modèles LLM (~Go de blobs binaires) | Volume nommé géré par Docker : aucun besoin d'accès direct par l'humain, contenu re-téléchargeable à l'identique (`ollama pull`). Exception assumée à la règle bind mount. |
