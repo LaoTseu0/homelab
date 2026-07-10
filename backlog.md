@@ -60,7 +60,7 @@
 
 ## Réseau (voir architecture/reseau.md)
 
-- [ ] **Réservations DHCP** (box Free) pour `nas` (192.168.1.80) et
+- [ ] **Réservations DHCP** (box Bouygues) pour `nas` (192.168.1.80) et
       `jarvis-central` (192.168.1.57) — les IP sont documentées mais non
       garanties tant que ce n'est pas fait.
 - [ ] Lien RDC↔étage : surveiller la fiabilité WiFi, Ethernet/CPL à terme.

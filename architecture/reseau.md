@@ -10,14 +10,14 @@
 
 ## 1. Vue d'ensemble
 
-- **Box Free** : routeur/DHCP du foyer, réseau local `192.168.1.0/24`.
+- **Box Bouygues** : routeur/DHCP du foyer, réseau local `192.168.1.0/24`.
 - **Aucune exposition à Internet** : pas de redirection de port sur la box
   (principe n°1 de [securite.md](securite.md)).
 - Routeur Asus RT-AX86U Pro **non branché** — réservé à un projet futur
   (VLAN, VPN, voir backlog).
 
 ```
-Internet ═══ [ Box Free ] ─── LAN 192.168.1.0/24 (Ethernet + WiFi)
+Internet ═══ [ Box Bouygues ] ─── LAN 192.168.1.0/24 (Ethernet + WiFi)
                   │
    ┌──────────────┼──────────────────┬───────────────────────┐
    ▼              ▼                  ▼                       ▼
@@ -68,7 +68,7 @@ Internet ═══ [ Box Free ] ─── LAN 192.168.1.0/24 (Ethernet + WiFi)
 
 ## 5. Évolutions prévues (backlog)
 
-- Réservations DHCP (box Free) pour nas et jarvis-central.
+- Réservations DHCP (box Bouygues) pour nas et jarvis-central.
 - Fiabiliser le lien RDC↔étage (Ethernet/CPL à terme).
 - Routeur Asus : segmentation (VLAN IoT) et/ou VPN WireGuard si accès
   distant un jour.

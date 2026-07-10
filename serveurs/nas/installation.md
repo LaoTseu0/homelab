@@ -73,6 +73,48 @@ git config core.sharedRepository group
 Cela évite les conflits de permissions quand plusieurs comptes poussent dans le
 même dépôt.
 
+### Branche par défaut
+
+Configuré (en tant que `pinas`) pour que tout nouveau dépôt parte sur `main` :
+
+```bash
+git config --global init.defaultBranch main
+```
+
+> Historique : `memoire-agent.git` avait été créé sur `master` (ancien défaut
+> de git). Rectifié le 10 juillet 2026 :
+>
+> ```bash
+> git -C /srv/git/memoire-agent.git branch -m master main
+> git -C /srv/git/memoire-agent.git symbolic-ref HEAD refs/heads/main
+> ```
+>
+> (et sur chaque clone existant : `git branch -m master main`, `git fetch`,
+> `git branch -u origin/main main`, `git remote set-head origin -a`.)
+
+### Créer un nouveau dépôt (procédure standard)
+
+```bash
+# 1. Sur le PC — le dépôt de travail
+cd mon-app
+git init
+git add . && git commit -m "Premier commit"
+
+# 2. Sur le NAS — le dépôt central (une seule fois, en tant que pinas)
+ssh nas "git init --bare --shared=group /srv/git/mon-app.git"
+
+# 3. Sur le PC — relier et pousser
+git remote add origin nas:/srv/git/mon-app.git
+git push -u origin main
+```
+
+Le point clé de l'étape 2 : **`--shared=group`** règle
+`core.sharedRepository=group` **et** les permissions de groupe dès la
+création. Combiné au setgid de `/srv/git`, le dépôt naît conforme au modèle
+d'accès (groupe `agents`), sans retouche manuelle.
+`git init --bare` ne s'utilise **que** sur le NAS — jamais sur un poste de
+travail.
+
 ### Dépôts existants (vérifié le 10 juillet 2026)
 
 - `memoire-agent.git` — mémoire des agents (dépôt de test initial).

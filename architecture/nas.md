@@ -31,11 +31,42 @@ VPN pourra être ajouté plus tard.
 | NVMe 1 To | format M.2 / PCIe | Mis de côté pour un autre projet |
 | Routeur Asus RT-AX86U Pro | non branché | Réservé à un projet futur (VPN, etc.) |
 
-> Réseau actuel : box Free, connexion **Ethernet** du Pi.
+> Réseau actuel : box Bouygues, connexion **Ethernet** du Pi
+> (voir [reseau.md](reseau.md)).
 
 ---
 
-## 3. Modèle d'accès — résumé
+## 3. Le système git — serveur « bare over SSH »
+
+Le NAS n'héberge **pas une forge** (GitHub, GitLab, Gitea…) : c'est du
+**git natif servi par SSH**, la forme la plus élémentaire d'hébergement git
+(modèle décrit dans le chapitre « Git on the Server » du livre Pro Git).
+Trois concepts le définissent :
+
+- **Dépôts bare** (« nus ») : les `*.git` de `/srv/git` ne contiennent que
+  l'historique, pas de répertoire de travail. On ne travaille jamais dedans —
+  on y pousse et on en tire. Pour en voir le contenu :
+  `git -C /srv/git/<depot>.git ls-tree -r --name-only main`.
+- **SSH comme seul protocole** : `git clone nas:/srv/git/<depot>.git` ouvre
+  une connexion SSH et lance les commandes git côté Pi. Pas de démon dédié,
+  pas de service web — SSH *est* le serveur.
+- **Shared repository model** : `core.sharedRepository=group` + bit setgid
+  sur `/srv/git` + groupe `agents` → les permissions Unix font office de
+  gestion des droits multi-comptes.
+
+**Pourquoi ce choix** : zéro maintenance, zéro surface d'attaque
+supplémentaire (SSH était déjà là), et aligné avec la philosophie du projet
+(git + markdown, pas de service superflu).
+
+**Évolutions possibles si le besoin émerge** (aucune urgence) :
+- une forge légère auto-hébergée (**Gitea/Forgejo**) si le besoin d'une
+  interface web (relecture, navigation) apparaît ;
+- **Gitolite** si la gestion des comptes Unix à la main devient pénible
+  (droits fins par dépôt/branche).
+
+---
+
+## 4. Modèle d'accès — résumé
 
 | Qui | Outil | Accès |
 |---|---|---|
@@ -48,7 +79,7 @@ distincts, dossiers distincts, mécanismes distincts.
 
 ---
 
-## 4. Points de vigilance
+## 5. Points de vigilance
 
 - **Sauvegarde** : tant que le backup n'est pas en place, toutes les données
   vivent sur la **seule microSD**. Les dépôts git sont protégés s'ils sont clonés
