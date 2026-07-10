@@ -130,16 +130,5 @@ docker run --rm --gpus all ubuntu nvidia-smi
 Affiche le même tableau que le `nvidia-smi` de l'hôte → le GPU est accessible
 depuis les conteneurs. ✅ Validé.
 
----
-
-## 4. État final du socle
-
-```
-Ubuntu Server 26.04 LTS (headless, SSH)
- └── Driver NVIDIA (RTX 2060 visible : nvidia-smi)
-      └── Docker (groupe docker → sans sudo)
-           └── NVIDIA Container Toolkit (--gpus all fonctionnel)
-```
-
-Tout ce qui suit (Ollama, faster-whisper, Piper, Home Assistant…) ne sera que
-des conteneurs posés sur ce socle.
+> L'état final du socle et les services qui tournent dessus sont décrits dans
+> [jarvis-body.md](jarvis-body.md).
