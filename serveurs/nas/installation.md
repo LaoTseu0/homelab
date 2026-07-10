@@ -69,11 +69,10 @@ git config core.sharedRepository group
 Cela évite les conflits de permissions quand plusieurs comptes poussent dans le
 même dépôt.
 
-### Dépôts existants
+### Dépôts existants (vérifié le 10 juillet 2026)
 
 - `memoire-agent.git` — mémoire des agents (dépôt de test initial).
-- `archi-maison.git` — documentation de l'architecture (ancien nom).
-- `homelab.git` — ce dépôt (doc du homelab).
+- `homelab.git` — ce dépôt (doc + config de déploiement du homelab).
 
 ### Adresse de clonage (depuis un poste autorisé)
 
