@@ -48,5 +48,6 @@ echo "   journalctl -u wyoming-satellite -f     # logs du satellite"
 echo "   puis : « héï djarvis, quelle heure est-il ? »"
 echo
 echo "NB après un reset complet : /srv/homeassistant est vierge → refaire"
-echo "l'onboarding HA (ou restaurer un backup) ; vérifier le numéro de carte"
-echo "ALSA du XVF3800 (arecord -l) et l'ajuster dans wyoming-satellite.service."
+echo "l'onboarding HA (ou restaurer un backup). La carte audio est adressée"
+echo "par nom (CARD=Array), stable entre boots — si le satellite ne trouve"
+echo "pas le micro, vérifier le nom avec : arecord -l"

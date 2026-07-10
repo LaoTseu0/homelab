@@ -91,6 +91,34 @@ git config --global init.defaultBranch main
 >
 > (et sur chaque clone existant : `git branch -m master main`, `git fetch`,
 > `git branch -u origin/main main`, `git remote set-head origin -a`.)
+>
+> Même famille de problème sur `homelab.git` : créé avec un HEAD pointant
+> sur `master` alors que seule `main` a été poussée. **Symptôme** : un clone
+> frais arrive **vide** avec `warning: remote HEAD refers to nonexistent
+> ref, unable to checkout`. **Correction** (rectifié le 10 juillet 2026) :
+>
+> ```bash
+> sudo git -C /srv/git/homelab.git symbolic-ref HEAD refs/heads/main
+> # puis dans le clone déjà fait : git checkout main
+> ```
+
+### Confiance multi-comptes (`safe.directory`)
+
+Depuis git 2.35.2 (CVE-2022-24765), git refuse d'opérer dans un dépôt
+appartenant à **un autre utilisateur** — les permissions Unix n'y changent
+rien : elles disent qui *peut* accéder, `safe.directory` dit à qui l'on
+*fait confiance* (un dépôt piégé peut exécuter du code via hooks/config).
+Notre modèle « dépôts de `pinas`, utilisés par le groupe `agents` » est
+l'usage légitime prévu : on déclare la confiance au niveau **système**,
+une fois par dépôt :
+
+```bash
+sudo git config --system --add safe.directory /srv/git/homelab.git
+sudo git config --system --add safe.directory /srv/git/memoire-agent.git
+```
+
+**Symptôme si on l'oublie** : `fatal: detected dubious ownership in
+repository` au clone/pull depuis un compte agent.
 
 ### Créer un nouveau dépôt (procédure standard)
 
@@ -102,6 +130,7 @@ git add . && git commit -m "Premier commit"
 
 # 2. Sur le NAS — le dépôt central (une seule fois, en tant que pinas)
 ssh nas "git init --bare --shared=group /srv/git/mon-app.git"
+ssh nas "sudo git config --system --add safe.directory /srv/git/mon-app.git"
 
 # 3. Sur le PC — relier et pousser
 git remote add origin nas:/srv/git/mon-app.git

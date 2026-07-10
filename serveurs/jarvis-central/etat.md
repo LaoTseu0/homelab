@@ -212,7 +212,7 @@ Pas la peine d'industrialiser un banc d'essai.
 
 **Matériel** : ReSpeaker **XVF3800 en USB** (variante USB Audio — question
 ouverte n°1 de l'architecture **tranchée** : la carte apparaît dans `lsusb`
-et comme carte ALSA `plughw:2,0`). Alimentée par le port USB, enceinte
+et comme carte ALSA nommée `Array`). Alimentée par le port USB, enceinte
 branchée sur sa sortie audio (indispensable : l'annulation d'écho de la puce
 XMOS doit « entendre » ce que l'enceinte joue).
 
@@ -227,8 +227,10 @@ cd ~/wyoming-satellite && script/setup
 **Lancement** : service systemd
 [`wyoming-satellite.service`](../../deploiement/jarvis-central/wyoming-satellite.service)
 (versionné dans `deploiement/`, installé par `installer.sh`), qui exécute
-`script/run` avec le micro/enceinte sur `plughw:2,0`, le wake word délégué
-au conteneur openwakeword (10400), et `Restart=always`.
+`script/run` avec le micro/enceinte sur `plughw:CARD=Array,DEV=0` —
+adressage **par nom**, robuste au changement d'ordre d'énumération des
+cartes entre boots, contrairement au numéro (`plughw:2,0`). Wake word
+délégué au conteneur openwakeword (10400), `Restart=always`.
 
 ```bash
 systemctl status wyoming-satellite     # état
@@ -290,6 +292,7 @@ besoin de toucher directement. Même logique que le NAS (`/srv/git`,
 | `/srv/wyoming/whisper/`, `/srv/wyoming/piper/` | Modèles STT/TTS téléchargés (bind mounts `/data`) | Même logique : données de service, regroupées sous un parent `wyoming/` commun. Re-téléchargeables, mais autant ne pas le refaire à chaque recréation de conteneur. |
 | volume Docker `ollama` | Modèles LLM (~Go de blobs binaires) | Volume nommé géré par Docker : aucun besoin d'accès direct par l'humain, contenu re-téléchargeable à l'identique (`ollama pull`). Exception assumée à la règle bind mount. |
 | `/home/jarvis/wyoming-satellite/` | Clone git + venv du satellite | Composant **temporaire** (part sur Pi 5/ESP32 en Phase 1) et installé hors Docker → statut expérimental, donc `/home` et pas `/srv`. S'il devenait permanent, il faudrait le promouvoir (conteneur ou `/srv` + systemd). |
+| `/home/jarvis/homelab/` | Clone du repo `homelab.git` (NAS, compte `jarvisc`) | Point d'entrée du déploiement : `git pull` puis `deploiement/jarvis-central/installer.sh`. Dans `/home` car c'est une copie de travail, pas une donnée de service — les copies déployées, elles, vont dans `/srv` et `/etc`. |
 | `/etc/docker/daemon.json` | Déclaration du runtime NVIDIA à Docker | Généré par `nvidia-ctk runtime configure` — config système, emplacement imposé. |
 | `/etc/apt/sources.list.d/*.list`, `/usr/share/keyrings/*.gpg` | Dépôts apt Docker et NVIDIA + leurs clés | Emplacements standard d'apt pour les dépôts tiers signés. |
 

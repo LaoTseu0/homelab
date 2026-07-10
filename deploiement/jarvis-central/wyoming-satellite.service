@@ -2,8 +2,10 @@
 # Déployé dans /etc/systemd/system/ par installer.sh — ne pas éditer sur le
 # serveur : modifier ICI (repo), commit, git pull, relancer installer.sh.
 #
-# NB : plughw:2,0 = numéro de carte ALSA du XVF3800 (vérifier avec arecord -l
-# après un reset — l'ordre des cartes peut changer).
+# NB : la carte est adressée par NOM (CARD=Array) et non par numéro — le
+# numéro ALSA est positionnel et peut changer entre boots/résets, le nom
+# vient du driver et reste stable. Vérifiable avec : arecord -l
+# (→ « card N: Array [reSpeaker XVF3800 4-Mic Array] »).
 
 [Unit]
 Description=Wyoming Satellite (bureau) - micro/enceinte XVF3800 vers Home Assistant
@@ -17,8 +19,8 @@ WorkingDirectory=/home/jarvis/wyoming-satellite
 ExecStart=/home/jarvis/wyoming-satellite/script/run \
   --name 'bureau' \
   --uri 'tcp://0.0.0.0:10700' \
-  --mic-command 'arecord -D plughw:2,0 -r 16000 -c 1 -f S16_LE -t raw' \
-  --snd-command 'aplay -D plughw:2,0 -r 22050 -c 1 -f S16_LE -t raw' \
+  --mic-command 'arecord -D plughw:CARD=Array,DEV=0 -r 16000 -c 1 -f S16_LE -t raw' \
+  --snd-command 'aplay -D plughw:CARD=Array,DEV=0 -r 22050 -c 1 -f S16_LE -t raw' \
   --wake-uri 'tcp://127.0.0.1:10400' \
   --wake-word-name 'hey_jarvis'
 Restart=always

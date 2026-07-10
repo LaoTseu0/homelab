@@ -41,6 +41,10 @@ cat /proc/asound/cards    # vue noyau des cartes son
 arecord -D plughw:2,0 -f S16_LE -r 16000 -c 1 -d 5 test.wav   # 2 = numéro de carte
 ```
 
+> Le numéro de carte est positionnel (peut changer entre boots). Pour les
+> configs durables, adresser **par nom** : `plughw:CARD=Array,DEV=0`
+> (le nom est dans la sortie d'`arecord -l`).
+
 - **Vu-mètre temps réel** (niveau micro à l'œil) :
 
 ```bash

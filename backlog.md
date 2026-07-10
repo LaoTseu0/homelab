@@ -47,6 +47,9 @@
 - [ ] Dépôt `jarvis-memory` (convention OKF) + Obsidian + git NAS — Phase 2.
 - [ ] Couche agentique (Hermes/Pi) sandboxée — Phase 3 (voir les non-négociables
       de sécurité, architecture/securite.md §5).
+- [ ] **Session de conception : routeur multi-modèles** — dérouler les
+      questions ouvertes de architecture/router-multi-model.md (long terme,
+      dépend d'un GPU plus gros).
 
 ## NAS
 

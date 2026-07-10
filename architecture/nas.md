@@ -52,7 +52,10 @@ Trois concepts le définissent :
   pas de service web — SSH *est* le serveur.
 - **Shared repository model** : `core.sharedRepository=group` + bit setgid
   sur `/srv/git` + groupe `agents` → les permissions Unix font office de
-  gestion des droits multi-comptes.
+  gestion des droits multi-comptes. S'y ajoute la déclaration de confiance
+  `safe.directory` (les permissions disent qui *peut* accéder, elle dit à
+  qui l'on *fait confiance* — détail dans
+  [../serveurs/nas/installation.md](../serveurs/nas/installation.md)).
 
 **Pourquoi ce choix** : zéro maintenance, zéro surface d'attaque
 supplémentaire (SSH était déjà là), et aligné avec la philosophie du projet

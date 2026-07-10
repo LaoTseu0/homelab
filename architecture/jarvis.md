@@ -272,7 +272,30 @@ techno — la veille devient de la mémoire agent) :
 
 ---
 
-## 12. Points de vigilance
+## 12. Évolutions envisagées (au-delà de la roadmap)
+
+Idées structurantes, non planifiées, à ne pas perdre. Règle : rien dans
+l'architecture actuelle ne doit **fermer** ces portes.
+
+### Routeur multi-modèles (orchestrateur vocal)
+
+Remplacer à terme le pipeline linéaire (wake → STT → LLM → TTS) par un
+**aiguilleur** placé devant HA : demande légère → modèle **audio-natif**
+(speech-to-speech, sans passage par le texte, réponse fluide et
+« humaine ») ; demande technique → STT + LLM de réflexion ; commande
+domotique → délégation à HA (API/MCP).
+
+→ Conception détaillée : **[router-multi-model.md](router-multi-model.md)**
+
+Pourquoi c'est compatible avec l'existant : les satellites parlent Wyoming
+(protocole ouvert) et se fichent de qui les écoute ; HA resterait le
+back-end domotique ; seule la couche d'orchestration serait remplacée.
+Prérequis matériel : les modèles audio-natifs locaux (Moshi, Qwen-Omni…)
+dépassent les 6 Go de VRAM → dépend du « scale vertical » (§2, principe 4).
+
+---
+
+## 13. Points de vigilance
 
 - **6 Go de VRAM** : bon pour domotique, faible pour dev complexe → Qwen3 4B au
   départ, GPU/cloud plus tard.
@@ -291,7 +314,7 @@ techno — la veille devient de la mémoire agent) :
 
 ---
 
-## 13. Questions ouvertes
+## 14. Questions ouvertes
 
 1. **Variante du XVF3800** (USB Audio vs XIAO ESP32-S3 / ESPHome) ? → change l'archi
    du satellite.
@@ -301,7 +324,7 @@ techno — la veille devient de la mémoire agent) :
 
 ---
 
-## 14. Glossaire
+## 15. Glossaire
 
 - **Assist / Wyoming** : pipeline vocal HA / protocole reliant wake word, STT, TTS.
 - **STT / TTS** : voix→texte / texte→voix (faster-whisper / Piper).
@@ -320,7 +343,7 @@ techno — la veille devient de la mémoire agent) :
 
 ---
 
-## 15. Sources / références
+## 16. Sources / références
 
 - Home Assistant — doc Assist, protocole Wyoming, intégration Ollama, Matter.
 - Seeed Studio Wiki + FormatBCE (GitHub) — intégration ESPHome du XVF3800.
