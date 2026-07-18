@@ -3,7 +3,7 @@
 > Posture de sécurité actuelle (honnête, sans complaisance), risques
 > identifiés, et mesures proposées classées must-have / nice-to-have.
 > Les actions retenues sont suivies dans [../backlog.md](../backlog.md).
-> Dernière mise à jour : 10 juillet 2026
+> Dernière mise à jour : 18 juillet 2026
 > Statut : **ébauche** — mesures proposées, arbitrage à venir
 
 ---
@@ -32,6 +32,7 @@
 | Conteneur HA | ⚠️ | `--privileged` = accès matériel très large |
 | Mises à jour de sécurité | ⚠️ | manuelles (quand on y pense) |
 | Backups | ❌ | aucun — ni config HA, ni données NAS |
+| jarvis-core | 🕐 | machine raccordée au LAN, aucun service Jarvis installé — posture à définir en même temps que son API LLM (voir [inference.md](inference.md) §6) |
 
 Lecture du risque : tout repose aujourd'hui sur la confiance dans le réseau
 WiFi de la maison. Un appareil compromis sur le LAN (téléphone, IoT, PC
@@ -45,10 +46,11 @@ Probabilité faible, mais coût de mitigation faible aussi.
 Par ordre de rapport protection/effort décroissant :
 
 1. **Restreindre Ollama et Wyoming à `127.0.0.1`** — tous leurs clients
-   (HA, satellite) sont sur la machine elle-même. Dans le compose :
-   `"127.0.0.1:11434:11434"` au lieu de `"11434:11434"`, idem pour
-   10200/10300/10400. Coût : 5 minutes. Le jour où un client distant
-   existera (satellite sur Pi 5), on ouvrira ce port précis, pas tout.
+   (HA, satellite) sont sur la machine elle-même : publier ces ports
+   (11434, 10200, 10300, 10400) sur l'interface locale seulement, dans le
+   compose de [deploiement/jarvis-central/](../deploiement/jarvis-central/).
+   Coût : 5 minutes. Le jour où un client distant existera (satellite sur
+   Pi 5), on ouvrira ce port précis, pas tout.
 2. **Pare-feu UFW sur jarvis-central** — politique deny entrant par défaut,
    n'autoriser que SSH (22) et HA (8123) depuis le sous-réseau local.
 3. **SSH par clé uniquement** (`PasswordAuthentication no`) — supprime la
@@ -63,6 +65,10 @@ Par ordre de rapport protection/effort décroissant :
    aujourd'hui (pas de dongle branché) ; le remplacer par des accès ciblés
    (`--device /dev/ttyUSB0` quand le coordinateur Zigbee arrivera).
 
+7. **API LLM de jarvis-core** (dès qu'elle existera) — pare-feu n'autorisant
+   que `jarvis-central` sur le port d'inférence, SSH par clé uniquement,
+   même posture que le reste du parc (voir [inference.md](inference.md) §6).
+
 ## 4. Nice-to-have (plus tard, si le besoin se précise)
 
 - **Épingler les versions d'images Docker** (tags explicites plutôt que
@@ -70,7 +76,7 @@ Par ordre de rapport protection/effort décroissant :
 - **Comptes HA familiaux non-admin** — quand d'autres personnes utiliseront
   l'interface.
 - **fail2ban** — surtout pertinent si un accès distant apparaît un jour.
-- **Passphrase sur les clés SSH** du PC principal.
+- **Passphrase sur les clés SSH** de pc-admin.
 - **Segmentation réseau / VLAN** (routeur Asus RT-AX86U Pro) — isoler l'IoT
   du reste ; projet réseau à part entière.
 - **VPN** (WireGuard sur le routeur Asus) pour l'accès distant propre, si le

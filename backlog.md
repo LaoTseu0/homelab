@@ -2,7 +2,7 @@
 
 > Tout ce qui reste à faire, par thème. Les mesures de sécurité sont
 > détaillées et justifiées dans [architecture/securite.md](architecture/securite.md).
-> Dernière mise à jour : 10 juillet 2026
+> Dernière mise à jour : 18 juillet 2026
 
 ---
 
@@ -51,6 +51,21 @@
       questions ouvertes de architecture/router-multi-model.md (long terme,
       dépend d'un GPU plus gros).
 
+## jarvis-core — tour d'inférence (voir architecture/inference.md)
+
+- [ ] **Trancher le modèle résident** (candidats en inference.md §4) et le
+      **serveur d'inférence** (llama.cpp / Ollama / vLLM).
+- [ ] **Trancher le port/API exposés** à jarvis-central + restriction pare-feu
+      (architecture/securite.md §3.7).
+- [ ] **Trancher la politique d'alimentation** (24/7, manuelle, ou WoL depuis
+      jarvis-central).
+- [ ] **Vérifier le profil EXPO de la RAM** (DDR5-6000 attendu — désactivé,
+      ~25 % de débit d'offload perdus).
+- [ ] **Vérifier alimentation + slots PCIe** — conditionne l'option future
+      « second GPU 24 Go ».
+- [ ] **Documenter le socle** : créer `serveurs/jarvis-core/installation.md`
+      au montage, tenir `etat.md` à jour.
+
 ## NAS
 
 - [ ] Acheter un **adaptateur USB-SATA** pour le SSD Kingston.
@@ -58,12 +73,13 @@
 - [ ] (Plus tard) Migrer le stockage primaire microSD → disque durable.
 - [ ] (Optionnel) Clés SSH dédiées par agent + comptes par agent.
 - [ ] (Optionnel) Accès distant via VPN (routeur Asus RT-AX86U Pro).
-- [ ] (Optionnel) Passphrase sur la clé SSH du PC principal.
+- [ ] (Optionnel) Passphrase sur les clés SSH de pc-admin.
 - [ ] (Optionnel) Découper plus finement la doc NAS si elle grossit.
 
 ## Réseau (voir architecture/reseau.md)
 
-- [ ] **Réservations DHCP** (box Bouygues) pour `nas` (192.168.1.80) et
-      `jarvis-central` (192.168.1.57) — les IP sont documentées mais non
-      garanties tant que ce n'est pas fait.
+- [ ] **Réservations DHCP** (box Bouygues) pour `nas` (192.168.1.80),
+      `jarvis-central` (192.168.1.57), `jarvis-core` (192.168.1.187) et
+      `pc-admin` — les IP sont documentées mais non garanties tant que ce
+      n'est pas fait.
 - [ ] Lien RDC↔étage : surveiller la fiabilité WiFi, Ethernet/CPL à terme.

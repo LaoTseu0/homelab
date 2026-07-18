@@ -3,7 +3,7 @@
 > Procédures : comment le NAS a été monté (système, SSH, serveur git, Samba).
 > Le pourquoi et le modèle d'accès sont dans
 > [../../architecture/nas.md](../../architecture/nas.md).
-> Dernière mise à jour : 10 juillet 2026
+> Dernière mise à jour : 18 juillet 2026
 
 ---
 
@@ -19,25 +19,28 @@
 
 ## 2. Accès SSH
 
-- Connexion par **clé SSH** (ed25519) depuis le PC principal.
+- Connexion par **clé SSH** (ed25519) depuis `pc-admin`.
 - La clé du NAS est **distincte** de la clé GitHub (pas de mélange).
 - Authentification par **mot de passe conservée** en secours (pour brancher
   d'autres PC / futurs agents tant qu'ils n'ont pas leur propre clé).
 
-### Côté PC — fichier `~/.ssh/config`
+### Côté pc-admin — fichier `~/.ssh/config`
 
 ```
 Host nas
-    HostName nas.local
+    HostName 192.168.1.80
     User pinas
-    IdentityFile C:\Users\Lao\.ssh\id_ed25519_nas
+    IdentityFile C:\Users\antho\.ssh\id_ed25519_nas
     IdentitiesOnly yes
 ```
 
 Connexion simplifiée : `ssh nas`
 
-> Depuis une **machine** (config de service, script) : utiliser l'IP du NAS
-> plutôt que `nas.local` — convention et adresses dans
+> Convention (détail dans [../pc-admin/installation.md](../pc-admin/installation.md)) :
+> l'alias `Host` porte le **nom de la machine** (`nas`), le compte est dans
+> `User` (`pinas`), la clé est nommée `id_ed25519_<machine>`. Depuis une
+> **machine** (config de service, script) : utiliser l'IP directement —
+> convention et adresses dans
 > [../../architecture/reseau.md](../../architecture/reseau.md).
 
 ---
@@ -153,6 +156,13 @@ travail.
 
 ```
 git clone nas:/srv/git/<nom-du-depot>.git
+```
+
+### Inspecter un dépôt bare sans le cloner
+
+```bash
+git -C /srv/git/<depot>.git ls-tree -r --name-only main   # liste des fichiers
+git -C /srv/git/<depot>.git log --oneline -5              # derniers commits
 ```
 
 ---

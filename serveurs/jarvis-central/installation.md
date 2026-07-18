@@ -4,7 +4,7 @@
 > GPU, Docker et accès GPU depuis les conteneurs
 > (vieux PC gamer — RTX 2060 6 Go, 32 Go RAM, Ryzen 5).
 > Correspond au début de la **Phase 0** de [../../architecture/jarvis.md](../../architecture/jarvis.md).
-> Dernière mise à jour : 10 juillet 2026
+> Dernière mise à jour : 18 juillet 2026
 > Statut : **socle opérationnel** (OS + GPU + Docker + accès GPU conteneurs validé)
 
 ---
@@ -12,7 +12,7 @@
 ## 1. Vue d'ensemble
 
 Le PC a été formaté (Windows supprimé) et transformé en serveur Linux headless,
-administré en SSH depuis le PC principal, comme le NAS.
+administré en SSH depuis `pc-admin`, comme le NAS.
 
 | Élément | Valeur |
 |---|---|
@@ -32,13 +32,16 @@ Piper…) devient un simple conteneur — plus aligné avec la démarche
 
 ## 2. Installation de l'OS
 
-1. Clé USB bootable créée avec **Rufus** (PC principal) à partir de l'ISO
+1. Clé USB bootable créée avec **Rufus** (sur `pc-admin`) à partir de l'ISO
    Ubuntu Server 26.04 LTS.
 2. Installation avec écran + clavier branchés **temporairement** (contrairement
    au Pi, pas de pré-configuration headless possible sur un PC classique).
-3. Point important pendant l'installation : cocher **`[X] Install OpenSSH server`**
+3. Écrans successifs de l'installeur : choix de la langue, détection du
+   clavier, puis type d'installation → **Ubuntu Server** (pas la variante
+   *minimized*).
+4. Point important pendant l'installation : cocher **`[X] Install OpenSSH server`**
    à l'écran « SSH Setup » → le serveur SSH est actif dès le premier démarrage.
-4. Après vérification de la connexion SSH depuis le PC principal : écran et
+5. Après vérification de la connexion SSH depuis `pc-admin` : écran et
    clavier débranchés, la machine tourne en headless.
 
 > Réglage BIOS recommandé : « Restore on AC Power Loss » → **Power On**

@@ -1,3 +1,14 @@
+# Proto-architecture Jarvis — conversation de conception
+
+> Archivé le : 1er juillet 2026 (converti au format d'archive le 18 juillet 2026)
+> Origine : conversation IA ayant produit la v2 de
+> [../architecture/jarvis.md](../architecture/jarvis.md)
+> Conservé pour : trace du raisonnement initial (choix Qwen3 4B,
+> ESP32/Matter, mémoire OKF, orchestration Hermes/Pi)
+> ⚠️ Figé — ne plus modifier. Contenu potentiellement obsolète.
+
+---
+
 Le GPU confirmé (RTX 2060 6 Go / 32 Go RAM / Ryzen 5) débloque le choix de modèle — j'y viens. Mais tu cites plusieurs standards/outils récents que je ne veux pas te décrire de mémoire (OKF, Pi.dev, Hermes…). Je vérifie avant de trancher.OKF confirmé et très pertinent pour toi. Maintenant je vérifie les outils d'orchestration que tu cites (Pi.dev, Hermes) et l'état de Matter/ESP32.OpenClaw se confirme au passage (il est bâti sur le SDK de Pi). Reste « Hermes » et l'état de Matter/ESP32.Reste l'état de Matter et des satellites ESP32.Le GPU confirmé (RTX 2060 6 Go, 32 Go RAM, Ryzen 5) et tes pistes tombent bien : presque tout ce que tu cites est réel, récent, et — bonne surprise — **converge vers le même socle : du markdown + git**. Je t'oriente point par point, puis je consolide dans la v2 du document.
 
 ## 1. Le modèle sur ta RTX 2060 (6 Go)

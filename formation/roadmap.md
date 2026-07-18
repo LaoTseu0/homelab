@@ -5,7 +5,7 @@
 > double objectif : être capable de **produire chaque couche soi-même**, et
 > être **opérationnel et demandé sur le marché du travail** (profil
 > AI Engineer). Le homelab (Jarvis) sert de terrain d'entraînement et de
-> portfolio — voir [architecture/jarvis.md](architecture/jarvis.md).
+> portfolio — voir [architecture/jarvis.md](../architecture/jarvis.md).
 > Couvre l'intégralité des sujets de la roadmap de référence
 > [roadmap.sh/ai-engineer](https://roadmap.sh/ai-engineer) (correspondance en §9)
 > et confrontée aux offres d'emploi réelles (relevé de terrain en §10).
@@ -126,7 +126,7 @@ Notions clés : débit (tokens/s) vs latence, batching, KV cache, VRAM
   utile pour comparer des modèles sans multiplier les comptes.
 - **Choisir le bon modèle** : coût / latence / qualité / confidentialité /
   taille de contexte — le raisonnement du
-  [routeur multi-modèles](architecture/router-multi-model.md) appliqué
+  [routeur multi-modèles](../architecture/router-multi-model.md) appliqué
   au métier. Question d'entretien classique.
 
 ### Couche 2 — Orchestration : câbler le LLM dans une application
@@ -203,7 +203,7 @@ Piper = text-to-speech). À savoir raconter en ces termes.
 - **Sandboxing et garde-fous** : moindre privilège, interception des
   appels d'outils (hook `tool_call` de Pi), conteneurs, validation
   humaine des actions destructives. Voir
-  [architecture/securite.md](architecture/securite.md) §5 — les
+  [architecture/securite.md](../architecture/securite.md) §5 — les
   non-négociables du homelab sont exactement les bonnes pratiques métier.
 
 ### Couche 4 — Protocoles : la glu
@@ -262,7 +262,7 @@ Piper = text-to-speech). À savoir raconter en ces termes.
 
 **Coûts et dimensionnement** : estimer tokens/mois, local vs API, petit
 vs gros modèle par tâche (le
-[routeur multi-modèles](architecture/router-multi-model.md) est ce
+[routeur multi-modèles](../architecture/router-multi-model.md) est ce
 raisonnement appliqué).
 
 **Fine-tuning (culture)** : LoRA/QLoRA sur petit modèle — savoir ce que
@@ -342,7 +342,10 @@ qualité professionnelle — le repo homelab en est la preuve.
 ### Module 1 — Le socle sans framework *(2-3 semaines)*
 
 Écrire en **Python pur** contre l'Ollama du homelab
-(`http://192.168.1.57:11434`, voir [architecture/reseau.md](architecture/reseau.md)) :
+(`http://192.168.1.57:11434`, voir [architecture/reseau.md](../architecture/reseau.md) —
+endpoint amené à changer : restriction à `127.0.0.1` prévue côté sécurité,
+et l'inférence lourde déménage sur `jarvis-core`, voir
+[architecture/inference.md](../architecture/inference.md)) :
 
 - [ ] un chat en CLI avec historique de conversation (gestion du contexte
       à la main : troncature, résumé/compaction) — avec **streaming** ;
@@ -392,11 +395,11 @@ Qdrant + LlamaIndex), with regression evals ».
 ### Module 3 — L'agent maison : « Hermes sur base Pi » *(1-2 mois, = Phase 3 Jarvis)*
 
 Fusion formation × roadmap Jarvis (voir
-[architecture/jarvis.md](architecture/jarvis.md) §7) :
+[architecture/jarvis.md](../architecture/jarvis.md) §7) :
 
 - [ ] extension Pi **hook `tool_call`** : liste noire de commandes
       destructives + validation humaine — le non-négociable de
-      [architecture/securite.md](architecture/securite.md) §5 ;
+      [architecture/securite.md](../architecture/securite.md) §5 ;
 - [ ] **outil custom `home_assistant`** (`pi.registerTool`) appelant
       l'API REST de HA avec un token à périmètre limité ;
 - [ ] **mémoire versionnée** : hooks `session_start`/`session_shutdown`
@@ -492,7 +495,7 @@ consumer hardware ».
    README : le problème, l'architecture (un schéma), les métriques, ce
    que vous referiez autrement. Le repo homelab lui-même peut avoir une
    vitrine publique expurgée (pas d'IP, pas de détails famille —
-   cohérent avec [workflow doc](README.md)).
+   cohérent avec [workflow doc](../README.md)).
 2. **Écrire** : un post par module (blog perso ou dev.to). « Building a
    RAG over my homelab docs, with evals » attire exactement les bons
    recruteurs. La qualité de doc déjà démontrée dans ce repo est un
@@ -626,7 +629,7 @@ Strasbourg), Cenova (GenAI Engineer RAG & MCP, Neuilly), Mirakl
    Mirakl). Chaque module doit se raconter en termes de mise en
    production : monitoring, coûts, robustesse — pas de démo jetable.
 3. **GRDF construit littéralement un Jarvis d'entreprise** : gateway
-   multi-modèles (= le [routeur multi-modèles](architecture/router-multi-model.md)),
+   multi-modèles (= le [routeur multi-modèles](../architecture/router-multi-model.md)),
    guardrails, mémoire, RAG, prompt management, MCP, agents. Le homelab
    est une réplique 1:1 des plateformes que les grands groupes montent —
    argument d'entretien à formuler exactement ainsi.

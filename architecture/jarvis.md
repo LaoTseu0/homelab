@@ -5,9 +5,11 @@
 > agents/Claude, pensé pour vivre dans git (à côté de `archi-maison.git` /
 > `homelab.git` / `memoire-agent.git` sur le NAS).
 >
-> **Dernière mise à jour** : 1er juillet 2026 — **v2**
-> **Statut global** : conception consolidée / démarrage imminent. Micro XVF3800
-> reçu. GPU cerveau confirmé (RTX 2060 6 Go). Aucune brique encore installée.
+> **Dernière mise à jour** : 18 juillet 2026 — **v3**
+> **Statut global** : **Phase 0 terminée** — boucle vocale complète validée sur
+> `jarvis-central` (voir [../serveurs/jarvis-central/etat.md](../serveurs/jarvis-central/etat.md)).
+> Tour d'inférence `jarvis-core` (RTX 4090) en préparation — voir
+> [inference.md](inference.md).
 
 ---
 
@@ -87,13 +89,11 @@ couches distinctes et complémentaires**, reliées par **MCP**, partageant une
 
 | Élément | Détail | Rôle Jarvis |
 |---|---|---|
-| **Vieux PC gamer** | **RTX 2060 6 Go**, 32 Go RAM, Ryzen 5 | **Cerveau central** (HA + Ollama + Whisper + Piper + agent) |
-| PC perso | RTX 4090 24 Go | **Non dédié** (usage perso conservé) |
-| Raspberry Pi 4 8 Go | **= NAS** (git + SMB), actif | Occupé — ne pas réquisitionner |
-| Raspberry Pi 5 8 Go | libre | **Satellite** ou hôte add-ons vocaux |
-| PC admin | B650, WiFi | Gestion homelab (étage) |
-| SSD Kingston 250 Go | adaptateur USB-SATA non commandé | Backup (prévu) |
-| **ReSpeaker XVF3800** | 4 micros XMOS, far-field ~5 m, AEC/DoA HW ; **PCB nu** | Micro du 1er satellite (reçu) |
+| **`jarvis-central`** (vieux PC gamer) | **RTX 2060 6 Go**, 32 Go RAM, Ryzen 5 | **Cerveau voix/domotique** (HA + Ollama + Whisper + Piper) — front door 24/7 |
+| **`jarvis-core`** (tour) | **RTX 4090 24 Go**, 64 Go RAM | **Moteur d'inférence LLM dédié** — en préparation, voir [inference.md](inference.md) |
+| Raspberry Pi 4 8 Go | **= NAS** (git + SMB), actif | Occupé — ne pas réquisitionner (avec SSD Kingston 250 Go en backup) |
+| Raspberry Pi 5 8 Go | libre | **Satellite** ou hôte add-ons vocaux (ReSpeaker XVF3800 prévu) |
+| `pc-admin` (PC portable Asus ROG) | PC perso | Administration du homelab (étage) |
 
 ### Lecture de la RTX 2060 (6 Go) — ce qui rentre
 
@@ -106,10 +106,11 @@ couches distinctes et complémentaires**, reliées par **MCP**, partageant une
 | Modèles 20–30B | >12 Go | ❌ hors 6 Go (cible d'un futur GPU) |
 
 > **6 Go = OK pour la domotique.** Pour le **dev Three.js**, un 4B local est
-> faible → justifie plus tard un GPU plus gros **ou** un fallback cloud. Comme
-> Hermes/Pi sont *model-agnostic*, on route les tâches lourdes ailleurs sans
-> ré-architecturer. Le **CPU + 32 Go de RAM** est un atout : inférence CPU de
-> secours, Whisper/Pyannote sur CPU si besoin.
+> faible → c'est le rôle de **`jarvis-core`** (RTX 4090, voir
+> [inference.md](inference.md)). Comme Hermes/Pi sont *model-agnostic*, on
+> route les tâches lourdes vers jarvis-core sans ré-architecturer. Le
+> **CPU + 32 Go de RAM** est un atout : inférence CPU de secours,
+> Whisper/Pyannote sur CPU si besoin.
 
 ---
 
@@ -266,7 +267,8 @@ techno — la veille devient de la mémoire agent) :
 ### Phase 4 — Extension & R&D
 - [ ] Multi-pièces (ESP32-S3-BOX secondaires) + écran salon.
 - [ ] Domotique (Zigbee puis Matter/Thread).
-- [ ] **Scale vertical** : GPU plus gros → modèle plus fort (Gemma 4 12B+, 20–30B).
+- [ ] **Scale vertical** : brancher Jarvis sur `jarvis-core` (RTX 4090) →
+      modèle plus fort (voir [inference.md](inference.md)).
 - [ ] **Diarisation** (Pyannote) — expérimental.
 - [ ] Option **fallback cloud** pour tâches lourdes (Three.js/code).
 
@@ -291,14 +293,15 @@ Pourquoi c'est compatible avec l'existant : les satellites parlent Wyoming
 (protocole ouvert) et se fichent de qui les écoute ; HA resterait le
 back-end domotique ; seule la couche d'orchestration serait remplacée.
 Prérequis matériel : les modèles audio-natifs locaux (Moshi, Qwen-Omni…)
-dépassent les 6 Go de VRAM → dépend du « scale vertical » (§2, principe 4).
+dépassent les 6 Go de VRAM → les 24 Go de `jarvis-core` lèvent ce blocage
+(voir [inference.md](inference.md)).
 
 ---
 
 ## 13. Points de vigilance
 
-- **6 Go de VRAM** : bon pour domotique, faible pour dev complexe → Qwen3 4B au
-  départ, GPU/cloud plus tard.
+- **6 Go de VRAM** : bon pour domotique, faible pour dev complexe → Qwen3 4B
+  pour la voix, les tâches lourdes vers `jarvis-core` ([inference.md](inference.md)).
 - **Pi 4 8 Go = NAS** (occupé). Satellite = Pi 5 libre / ESP32 / achat.
 - **Whisper sur Pi = trop lent** (~8 s) → STT sur le PC (GPU/CPU).
 - **Lien RDC↔étage en WiFi** : débit OK (audio léger), fiabilité à surveiller
@@ -316,11 +319,15 @@ dépassent les 6 Go de VRAM → dépend du « scale vertical » (§2, principe 4
 
 ## 14. Questions ouvertes
 
-1. **Variante du XVF3800** (USB Audio vs XIAO ESP32-S3 / ESPHome) ? → change l'archi
-   du satellite.
-2. HA en **VM/OS dédié** ou **conteneur** sur l'OS du PC ?
-3. Emplacement physique : PC-cerveau (étage ?) et satellite salon (distance TV).
-4. **Hermes ou Pi** pour la couche agentique (selon le poids dev vs domotique) ?
+1. Emplacement physique : PC-cerveau (étage ?) et satellite salon (distance TV).
+2. **Hermes ou Pi** pour la couche agentique (selon le poids dev vs domotique) ?
+3. Les questions d'inférence de `jarvis-core` (modèle, serveur, alimentation) :
+   voir [inference.md](inference.md) §6.
+
+> Tranchées depuis la v2 : la **variante du XVF3800** (→ USB Audio, voir
+> [etat.md §2.4](../serveurs/jarvis-central/etat.md)) et **HA en VM vs
+> conteneur** (→ conteneur Docker, voir
+> [installation.md](../serveurs/jarvis-central/installation.md)).
 
 ---
 

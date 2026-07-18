@@ -3,7 +3,7 @@
 > Ce que le NAS est, à quoi il sert, et son modèle d'accès.
 > Les procédures d'installation détaillées sont dans
 > [../serveurs/nas/installation.md](../serveurs/nas/installation.md).
-> Dernière mise à jour : 10 juillet 2026
+> Dernière mise à jour : 18 juillet 2026
 > Statut : **phase de test** (stockage sur microSD, backup SSD à venir)
 
 ---
@@ -29,7 +29,7 @@ VPN pourra être ajouté plus tard.
 | microSD | — | OS **et** données (stockage primaire, **phase de test**) |
 | SSD Kingston 250 Go (SATA) | nécessite un adaptateur USB-SATA (à acheter) | Backup (prévu, pas encore en place) |
 | NVMe 1 To | format M.2 / PCIe | Mis de côté pour un autre projet |
-| Routeur Asus RT-AX86U Pro | non branché | Réservé à un projet futur (VPN, etc.) |
+| Routeur Asus RT-AX86U Pro | branché, en répéteur derrière la box | Raccorde les machines filaires ; VLAN/VPN en projet futur (voir [reseau.md](reseau.md)) |
 
 > Réseau actuel : box Bouygues, connexion **Ethernet** du Pi
 > (voir [reseau.md](reseau.md)).
@@ -45,11 +45,11 @@ Trois concepts le définissent :
 
 - **Dépôts bare** (« nus ») : les `*.git` de `/srv/git` ne contiennent que
   l'historique, pas de répertoire de travail. On ne travaille jamais dedans —
-  on y pousse et on en tire. Pour en voir le contenu :
-  `git -C /srv/git/<depot>.git ls-tree -r --name-only main`.
-- **SSH comme seul protocole** : `git clone nas:/srv/git/<depot>.git` ouvre
-  une connexion SSH et lance les commandes git côté Pi. Pas de démon dédié,
-  pas de service web — SSH *est* le serveur.
+  on y pousse et on en tire (commandes d'inspection dans
+  [../serveurs/nas/installation.md](../serveurs/nas/installation.md)).
+- **SSH comme seul protocole** : un clone ouvre une connexion SSH et lance
+  les commandes git côté Pi. Pas de démon dédié, pas de service web —
+  SSH *est* le serveur.
 - **Shared repository model** : `core.sharedRepository=group` + bit setgid
   sur `/srv/git` + groupe `agents` → les permissions Unix font office de
   gestion des droits multi-comptes. S'y ajoute la déclaration de confiance
