@@ -33,8 +33,10 @@
       notebook ; exercice réussi avec un protocole en dict de scénarios +
       `**option` écrit par Anthony seul ; incident « génération débridée »
       → garde-fou `num_predict` + section supervision au backlog homelab)
-- [ ] **Gestion du contexte** — troncature puis résumé/compaction de
-      l'historique
+- [x] **Gestion du contexte** — troncature puis résumé/compaction
+      (05_contexte.py : compaction déboguée en live — trace du résumé,
+      placement en system ; `tronquer()` écrite par Anthony via slicing,
+      validée sur spec ; compaction éprouvée sur une vraie conversation)
 - [ ] **Function calling à la main** — 2-3 outils en schéma JSON, parser,
       exécuter, renvoyer (= comprendre ReAct)
 - [ ] **Mini-boucle d'agent** — read/write/edit/bash dans une boucle while
@@ -62,6 +64,11 @@
 | Seed = pseudo-aléatoire reproductible | exercice 04 | `seed=42` → 3 sorties identiques ; base des tests de non-régression LLM |
 | Borner toute génération | incident 04 | sampling débridé + question ouverte = génération sans fin, GPU à fond ; `num_predict`/`max_tokens` obligatoire dans toute app sérieuse |
 | `list` vs `dict` | relecture 04 | dict à clés 0..n = liste déguisée ; `for x in liste:` sans `range(n)` — dict pour chercher par nom, list pour parcourir en ordre |
+| Compaction = LLM au service de sa propre mémoire | 05_contexte | résumer les vieux échanges par un appel LLM, repartir de [system + résumé] ; 420 → 184 tokens dans le test |
+| Sans trace, pas de diagnostic | debug 05 | rappel échoué après compaction : impossible de trancher « résumé fautif ou modèle fautif » sans afficher le résumé — l'observabilité d'abord |
+| Le placement dans le contexte compte | debug 05 | résumé parfait ignoré en message *user* (réflexe « je ne stocke rien »), exploité en message *system* — l'autorité de la voix system est un outil |
+| Slicing de liste | exercice 05 | `messages[-4:]` = les 4 derniers ; `[x] + liste` concatène — `tronquer()` en 2 lignes |
+| La spec peut être fausse | exercice 05 | le « cas limite trivial » de l'énoncé dupliquait le message system — code fidèle à une spec trouée = bug quand même |
 
 ## Questions posées par Anthony (et réponses clés)
 
