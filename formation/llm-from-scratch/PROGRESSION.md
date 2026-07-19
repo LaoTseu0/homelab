@@ -37,8 +37,10 @@
       (05_contexte.py : compaction déboguée en live — trace du résumé,
       placement en system ; `tronquer()` écrite par Anthony via slicing,
       validée sur spec ; compaction éprouvée sur une vraie conversation)
-- [ ] **Function calling à la main** — 2-3 outils en schéma JSON, parser,
-      exécuter, renvoyer (= comprendre ReAct)
+- [x] **Function calling à la main** — 06_outils.py : heure_actuelle,
+      calculer (eval filtré), et `modeles_charges` **écrit par Anthony de
+      bout en bout** (fonction httpx.get + schéma JSON + dispatch) ; il a
+      aussi ajusté num_predict 400→800 de lui-même
 - [ ] **Mini-boucle d'agent** — read/write/edit/bash dans une boucle while
 - [ ] **Structured output** — extraction JSON validée Pydantic, retry si
       invalide
@@ -69,6 +71,10 @@
 | Le placement dans le contexte compte | debug 05 | résumé parfait ignoré en message *user* (réflexe « je ne stocke rien »), exploité en message *system* — l'autorité de la voix system est un outil |
 | Slicing de liste | exercice 05 | `messages[-4:]` = les 4 derniers ; `[x] + liste` concatène — `tronquer()` en 2 lignes |
 | La spec peut être fausse | exercice 05 | le « cas limite trivial » de l'énoncé dupliquait le message system — code fidèle à une spec trouée = bug quand même |
+| Le modèle propose, le code dispose | 06_outils | un tool_call est une *demande* JSON ; c'est notre code qui exécute et renvoie (role `tool`) — le modèle ne fait toujours que générer du texte |
+| La description d'outil = contrat de routage | 06_outils | le modèle choisit uniquement sur nom+description ; description trop large = mauvais routage (« disponibles » ≠ « chargés en VRAM ») |
+| Entrées non fiables & dispatch | 06_outils | nom et arguments viennent du modèle → dict FONCTIONS comme barrière, filtrage avant eval — premiers réflexes de sandboxing |
+| Savoir s'abstenir | tests 06 | « présente-toi » → zéro outil appelé : la pertinence du non-appel se teste aussi |
 
 ## Questions posées par Anthony (et réponses clés)
 
