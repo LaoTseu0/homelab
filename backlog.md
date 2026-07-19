@@ -2,7 +2,7 @@
 
 > Tout ce qui reste à faire, par thème. Les mesures de sécurité sont
 > détaillées et justifiées dans [architecture/securite.md](architecture/securite.md).
-> Dernière mise à jour : 18 juillet 2026
+> Dernière mise à jour : 19 juillet 2026
 
 ---
 
@@ -75,6 +75,31 @@
 - [ ] (Optionnel) Accès distant via VPN (routeur Asus RT-AX86U Pro).
 - [ ] (Optionnel) Passphrase sur les clés SSH de pc-admin.
 - [ ] (Optionnel) Découper plus finement la doc NAS si elle grossit.
+
+## Supervision des machines
+
+> Déclencheur : génération LLM débridée le 19 juillet 2026 (sampling
+> temperature 1.5 sans limite de tokens → GPU à fond et ventilateurs
+> plein régime sur jarvis-central jusqu'au timeout client). Sans
+> supervision, on ne voit l'emballement que quand on entend les ventilos.
+
+- [ ] **Choisir la brique de monitoring** : léger et immédiat (Netdata ou
+      Beszel, un conteneur par machine, dashboards + alertes sans config)
+      **vs** stack complète Prometheus + node_exporter + Grafana +
+      Alertmanager (plus de travail, mais compétence marché et alignée
+      couche T de [formation/roadmap.md](formation/roadmap.md)).
+      Piste : commencer léger, la stack pro comme projet d'apprentissage.
+- [ ] **Métriques GPU de jarvis-central** (température, VRAM, charge —
+      exporter nvidia-smi ou équivalent selon la brique choisie) ;
+      à étendre à jarvis-core (RTX 4090) dès son socle installé.
+- [ ] **Alertes** température/charge prolongée → notification (pas de
+      coupure automatique : les GPU se protègent seuls par throttling ;
+      couper une machine est une décision humaine).
+- [ ] **Borner les charges plutôt que tuer les machines** : `num_predict`
+      systématique dans les appels LLM (fait dans le notebook 04), timeouts
+      client, et à terme quotas côté serveur d'inférence.
+- [ ] (Optionnel) **Uptime des services** (Uptime Kuma) : Ollama, HA,
+      satellite Wyoming, NAS.
 
 ## Réseau (voir architecture/reseau.md)
 

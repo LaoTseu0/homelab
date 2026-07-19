@@ -29,8 +29,10 @@
 - [x] **Streaming** — afficher la réponse token par token (03_stream.py ;
       compteur de tokens = **premier code Python écrit par Anthony**, avec
       `.get()` défensif spontané)
-- [ ] **Sampling** — temperature, top-k, top-p : expérimenter et noter
-      *(bon candidat pour un premier notebook Jupyter)*
+- [x] **Sampling** — temperature, top-k, top-p (04_sampling.ipynb, premier
+      notebook ; exercice réussi avec un protocole en dict de scénarios +
+      `**option` écrit par Anthony seul ; incident « génération débridée »
+      → garde-fou `num_predict` + section supervision au backlog homelab)
 - [ ] **Gestion du contexte** — troncature puis résumé/compaction de
       l'historique
 - [ ] **Function calling à la main** — 2-3 outils en schéma JSON, parser,
@@ -53,6 +55,13 @@
 | Petit modèle = limites visibles | bidouillage | Qwen3 4B q4 est « teubé » par taille, pas par nature — parfait pour voir les mécanismes et les échecs |
 | Streaming = 1 ligne JSON par morceau | 03_stream | le modèle génère token par token ; `iter_lines` + `json.loads` ; l'affichage streame mais l'historique veut le texte recollé (`"".join`) |
 | `dict.get(clé, défaut)` vs `dict[clé]` | exercice 03 | `.get` ne plante pas si la clé manque — réflexe défensif face aux données externes |
+| Défauts de sampling en couches | debug 04 | le Modelfile du modèle impose ses défauts (`/api/show` : temp 0.7, top_p 0.8…) ; une option absente de la requête y retombe — régler la temperature sans neutraliser top_p/top_k masque son effet |
+| Méthodologie de debug | debug 04 | hypothèses → test discriminant → une variable à la fois — formalisée dans [../../guides/methodologie-debug.md](../../guides/methodologie-debug.md) avec l'étude de cas complète |
+| Ordre du pipeline de sampling | exercice 04 | prompt → probabilités → filtres top-k/top-p → temperature → tirage ; `top_k=1` rend la temperature inopérante ; `top_p=0.5` ≈ greedy sur du factuel (noyau réduit au favori) |
+| Autorégression sans retour arrière | exercice 04 | un mauvais token tiré (« hélium ») devient du contexte : le modèle ne peut pas effacer, il « se corrige » en public — génération de gauche à droite, sans brouillon |
+| Seed = pseudo-aléatoire reproductible | exercice 04 | `seed=42` → 3 sorties identiques ; base des tests de non-régression LLM |
+| Borner toute génération | incident 04 | sampling débridé + question ouverte = génération sans fin, GPU à fond ; `num_predict`/`max_tokens` obligatoire dans toute app sérieuse |
+| `list` vs `dict` | relecture 04 | dict à clés 0..n = liste déguisée ; `for x in liste:` sans `range(n)` — dict pour chercher par nom, list pour parcourir en ordre |
 
 ## Questions posées par Anthony (et réponses clés)
 
@@ -72,10 +81,17 @@
 ## Points de vigilance / à revoir
 
 - Premier code écrit par Anthony le 19 juillet (exercice 03) : correct du
-  premier coup, indentation comprise. **Continuer à augmenter la part de
-  code écrite par lui à chaque étape.**
+  premier coup, indentation comprise. Exercice 04 : protocole complet en
+  autonomie (dict de scénarios, `**option` réutilisé côté appelant).
+  **Continuer à augmenter la part de code écrite par lui à chaque étape.**
+- Feedback d'Anthony sur l'exercice 04 : énoncé pas assez précis, il a dû
+  choisir des valeurs « au pif ». **Les énoncés d'exercices doivent
+  spécifier toutes les valeurs attendues** (ou dire explicitement que le
+  choix fait partie de l'exercice).
 - Subtilité vue en passant : `print("\n")` = 2 sauts de ligne (le `\n` +
   celui de `print`) ; `print()` seul = 1.
+- Piège notebook vécu : les sorties affichées sous une cellule datent du
+  dernier run — ne jamais s'y fier sans réexécuter.
 
 ## Conventions du projet
 
