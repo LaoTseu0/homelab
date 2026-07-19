@@ -26,7 +26,9 @@
 - [x] **01_hello.py** — premier appel LLM : POST JSON → réponse JSON
 - [x] **02_chat.py** — chat CLI avec historique : modèle stateless,
       l'historique est renvoyé en entier à chaque tour, compteur de tokens
-- [ ] **Streaming** — afficher la réponse token par token *(prochaine étape)*
+- [x] **Streaming** — afficher la réponse token par token (03_stream.py ;
+      compteur de tokens = **premier code Python écrit par Anthony**, avec
+      `.get()` défensif spontané)
 - [ ] **Sampling** — temperature, top-k, top-p : expérimenter et noter
       *(bon candidat pour un premier notebook Jupyter)*
 - [ ] **Gestion du contexte** — troncature puis résumé/compaction de
@@ -49,6 +51,8 @@
 | venv ≠ VM | session 1 | juste un dossier de dépendances par projet (analogie node_modules) ; jamais versionné |
 | httpx | session 1 | bibliothèque HTTP (équiv. curl/fetch), choisie pour son mode async futur |
 | Petit modèle = limites visibles | bidouillage | Qwen3 4B q4 est « teubé » par taille, pas par nature — parfait pour voir les mécanismes et les échecs |
+| Streaming = 1 ligne JSON par morceau | 03_stream | le modèle génère token par token ; `iter_lines` + `json.loads` ; l'affichage streame mais l'historique veut le texte recollé (`"".join`) |
+| `dict.get(clé, défaut)` vs `dict[clé]` | exercice 03 | `.get` ne plante pas si la clé manque — réflexe défensif face aux données externes |
 
 ## Questions posées par Anthony (et réponses clés)
 
@@ -67,11 +71,11 @@
 
 ## Points de vigilance / à revoir
 
-- L'indentation est structurelle en Python (pas du style) — pas encore
-  pratiquée à la main par Anthony.
-- Anthony n'a pas encore écrit de Python lui-même : les scripts sont écrits
-  par Claude, lus/bidouillés par Anthony. **Prévoir des exercices où c'est
-  lui qui écrit** (à partir du streaming ou du sampling).
+- Premier code écrit par Anthony le 19 juillet (exercice 03) : correct du
+  premier coup, indentation comprise. **Continuer à augmenter la part de
+  code écrite par lui à chaque étape.**
+- Subtilité vue en passant : `print("\n")` = 2 sauts de ligne (le `\n` +
+  celui de `print`) ; `print()` seul = 1.
 
 ## Conventions du projet
 
