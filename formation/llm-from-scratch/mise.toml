@@ -1,0 +1,6 @@
+[tools]
+python = "3.12"
+
+# Crée et active automatiquement le venv en entrant dans le dossier
+[env]
+_.python.venv = { path = ".venv", create = true }

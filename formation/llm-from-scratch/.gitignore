@@ -1,0 +1,4 @@
+# Environnement virtuel Python (dépendances locales, jamais versionnées)
+.venv/
+# Caches de bytecode Python
+__pycache__/
