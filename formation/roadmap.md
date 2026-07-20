@@ -347,18 +347,22 @@ endpoint amené à changer : restriction à `127.0.0.1` prévue côté sécurit�
 et l'inférence lourde déménage sur `jarvis-core`, voir
 [architecture/inference.md](../architecture/inference.md)) :
 
-- [ ] un chat en CLI avec historique de conversation (gestion du contexte
+- [x] un chat en CLI avec historique de conversation (gestion du contexte
       à la main : troncature, résumé/compaction) — avec **streaming** ;
-- [ ] expérimenter les **paramètres de sampling** (temperature, top-k,
+- [x] expérimenter les **paramètres de sampling** (temperature, top-k,
       top-p) et les techniques de prompt (zero/few-shot, CoT) sur des cas
       concrets, noter les effets ;
-- [ ] du **function calling à la main** : définir 2-3 outils en schéma
+- [x] du **function calling à la main** : définir 2-3 outils en schéma
       JSON, parser la sortie du modèle, exécuter, renvoyer le résultat
       (= comprendre **ReAct** en l'implémentant) ;
-- [ ] une **mini-boucle d'agent** (pattern Pi) : read/write/edit/bash
+- [x] une **mini-boucle d'agent** (pattern Pi) : read/write/edit/bash
       dans une boucle while, ~200 lignes ;
-- [ ] du **structured output** : extraction d'infos en JSON validé
+- [x] du **structured output** : extraction d'infos en JSON validé
       Pydantic, avec retry en cas de JSON invalide.
+
+**✅ Module 1 terminé le 20 juillet 2026** — livrable : `formation/llm-from-scratch`
+(8 scripts + README anglais + PROGRESSION.md) ; extraction en repo dédié
+reportée, à décider par Anthony.
 
 **Livrable** : repo `llm-from-scratch` (ou équivalent), README anglais
 expliquant chaque mécanisme.

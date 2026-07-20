@@ -51,7 +51,14 @@
       `extraire()` avec retry **écrite par Anthony** (ternaire Python
       spontané) ; banc d'essai : 0 retry en contraint, retries
       systématiques en poli, auto-correction observée en live
-- [ ] **README anglais** — livrable portfolio (extraire en repo dédié ?)
+- [x] **README anglais** — livrable portfolio validé par Anthony
+      (+ requirements.txt) ; extraction en repo dédié : reportée, à
+      décider par Anthony si nécessaire
+
+**✅ Module 1 terminé le 20 juillet 2026** — les 8 mécanismes du socle
+sans framework, avec une part croissante de code écrite par Anthony
+(compteur 03 → protocole 04 → tronquer 05 → modeles_charges 06 →
+ecrire_fichier 07 → extraire 08).
 
 ## Notions acquises (validées en pratique)
 
