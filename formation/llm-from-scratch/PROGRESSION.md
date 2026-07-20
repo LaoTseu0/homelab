@@ -46,8 +46,11 @@
       MAX_TOURS ; `ecrire_fichier` **écrit par Anthony** (try/except
       au-delà de la spec) ; incidents analysés : typo du modèle dans un
       argument, rm→del auto-corrigé, « suppression niée » malgré preuve
-- [ ] **Structured output** — extraction JSON validée Pydantic, retry si
-      invalide
+- [x] **Structured output** — 08_structured.py : demander poliment vs
+      décodage contraint (`format` Ollama) vs validation Pydantic ;
+      `extraire()` avec retry **écrite par Anthony** (ternaire Python
+      spontané) ; banc d'essai : 0 retry en contraint, retries
+      systématiques en poli, auto-correction observée en live
 - [ ] **README anglais** — livrable portfolio (extraire en repo dédié ?)
 
 ## Notions acquises (validées en pratique)
@@ -87,6 +90,12 @@
 | Les outils fiabilisent les données, pas le raisonnement | incident 07 | listing prouvant la suppression sous les yeux, le modèle conclut l'inverse — ancré sur son propre doute précédent (autorégression à l'échelle de la conversation) |
 | Un résultat d'outil doit être explicite | incident 07 | `del` réussit en silence → « aucune sortie » est ambigu pour le modèle ; renvoyer le returncode lève l'ambiguïté |
 | `for ... else` Python | 07_agent | le `else` d'une boucle s'exécute si elle finit *sans* `break` — idéal pour détecter MAX_TOURS atteint ; n'existe pas en JS |
+| Décodage contraint = filtre grammatical | 08_structured | le `format` d'Ollama masque les tokens qui violeraient le schéma — un filtre de plus dans le pipeline de sampling du 04 ; 0 retry en contraint vs retries systématiques en « demande polie » |
+| La contrainte garantit la forme, pas le fond | banc 08 | `ram_go: 32` omis (champ optionnel, la grammaire l'autorise), `role: ''` qui passe la validation, `services: ['formation']` inventé — d'où `Field(min_length=1)` et la validation sémantique |
+| Pydantic = type hints exploités à l'exécution | 08_structured | `class Serveur(BaseModel)` + `model_validate_json` = json.loads + vérif des types + objet construit ; la réponse concrète à « Python typé comme JS ? » |
+| Le retry sur erreur de validation | 08_structured | ValidationError renvoyée au modèle comme information → il corrige (`role: null` → corrigé) ; même mécanique que rm→del en 07 |
+| Nos consignes ont des effets de bord | banc 08 | « mets null si une info est absente » → le modèle sur-applique et met null sur des champs requis — le prompt est aussi à déboguer |
+| Une classe est une valeur | 08_structured | `extraire(texte, Serveur)` : la classe se passe en argument, comme une fonction en JS ; premier usage de classes et d'héritage du parcours |
 
 ## Questions posées par Anthony (et réponses clés)
 
@@ -115,6 +124,14 @@
 - Mini-bidouille proposée (07) : enrichir le retour de
   `executer_commande` avec `resultat.returncode` pour lever l'ambiguïté
   des commandes silencieuses — à faire ou non avant l'étape suivante.
+- Exercice 08 : code final correct (ternaire spontané en prime) mais
+  Anthony signale avoir **eu du mal à l'écrire** — c'était l'exercice le
+  plus dense (construction de messages + boucle + try/except + raise en
+  une fonction). Diagnostic posé avec lui : ce n'est **ni la syntaxe ni
+  la logique, c'est l'assemblage** (traduire une spec multi-étapes en un
+  tout cohérent). Pour les prochains exercices denses : fournir un
+  squelette à trous (la structure donnée, les lignes à remplir) ou
+  découper en sous-fonctions exercées une à une.
 - Feedback d'Anthony sur l'exercice 04 : énoncé pas assez précis, il a dû
   choisir des valeurs « au pif ». **Les énoncés d'exercices doivent
   spécifier toutes les valeurs attendues** (ou dire explicitement que le
