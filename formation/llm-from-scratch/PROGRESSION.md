@@ -5,7 +5,7 @@
 > l'apprentissage d'Anthony en rendant le parcours visible.
 > **Tenu à jour par Claude à chaque étape franchie.**
 > Roadmap complète : [../roadmap.md](../roadmap.md) (ce projet = Module 1).
-> Dernière mise à jour : 19 juillet 2026
+> Dernière mise à jour : 20 juillet 2026
 
 ---
 
@@ -41,7 +41,11 @@
       calculer (eval filtré), et `modeles_charges` **écrit par Anthony de
       bout en bout** (fonction httpx.get + schéma JSON + dispatch) ; il a
       aussi ajusté num_predict 400→800 de lui-même
-- [ ] **Mini-boucle d'agent** — read/write/edit/bash dans une boucle while
+- [x] **Mini-boucle d'agent** — 07_agent.py : sandbox workspace/ +
+      garde anti path-traversal, validation humaine des commandes shell,
+      MAX_TOURS ; `ecrire_fichier` **écrit par Anthony** (try/except
+      au-delà de la spec) ; incidents analysés : typo du modèle dans un
+      argument, rm→del auto-corrigé, « suppression niée » malgré preuve
 - [ ] **Structured output** — extraction JSON validée Pydantic, retry si
       invalide
 - [ ] **README anglais** — livrable portfolio (extraire en repo dédié ?)
@@ -75,6 +79,14 @@
 | La description d'outil = contrat de routage | 06_outils | le modèle choisit uniquement sur nom+description ; description trop large = mauvais routage (« disponibles » ≠ « chargés en VRAM ») |
 | Entrées non fiables & dispatch | 06_outils | nom et arguments viennent du modèle → dict FONCTIONS comme barrière, filtrage avant eval — premiers réflexes de sandboxing |
 | Savoir s'abstenir | tests 06 | « présente-toi » → zéro outil appelé : la pertinence du non-appel se teste aussi |
+| Agent = LLM + outils + boucle while | 07_agent | la boucle de 06 copiée telle quelle ; seule la *nature* des outils change (lire des infos → agir sur le monde) |
+| Sandbox & path traversal | 07_agent | `(SANDBOX / nom).resolve()` + `is_relative_to` : le « ../../secrets » du modèle est bloqué — analogie volume Docker |
+| Validation humaine (human-in-the-loop) | 07_agent | commande shell montrée + confirmation clavier ; un refus est renvoyé au modèle comme information, sinon il croit avoir agi |
+| Les arguments d'outils sont générés, donc faillibles | incident 07 | « laotseu.txt » demandé → le modèle écrit `laoseu.txt` : typo dans un tool_call — entrée non fiable, version sournoise |
+| L'erreur d'outil est un feedback exploitable | test 07 | `rm` échoue (Windows) → le modèle lit l'erreur, diagnostique, retente avec `del` : la boucle s'auto-corrige |
+| Les outils fiabilisent les données, pas le raisonnement | incident 07 | listing prouvant la suppression sous les yeux, le modèle conclut l'inverse — ancré sur son propre doute précédent (autorégression à l'échelle de la conversation) |
+| Un résultat d'outil doit être explicite | incident 07 | `del` réussit en silence → « aucune sortie » est ambigu pour le modèle ; renvoyer le returncode lève l'ambiguïté |
+| `for ... else` Python | 07_agent | le `else` d'une boucle s'exécute si elle finit *sans* `break` — idéal pour détecter MAX_TOURS atteint ; n'existe pas en JS |
 
 ## Questions posées par Anthony (et réponses clés)
 
@@ -96,7 +108,13 @@
 - Premier code écrit par Anthony le 19 juillet (exercice 03) : correct du
   premier coup, indentation comprise. Exercice 04 : protocole complet en
   autonomie (dict de scénarios, `**option` réutilisé côté appelant).
+  Exercice 07 : `ecrire_fichier` correcte du premier coup, avec un
+  try/except autour de `write_text` **au-delà de la spec** — réflexe
+  défensif devenu spontané.
   **Continuer à augmenter la part de code écrite par lui à chaque étape.**
+- Mini-bidouille proposée (07) : enrichir le retour de
+  `executer_commande` avec `resultat.returncode` pour lever l'ambiguïté
+  des commandes silencieuses — à faire ou non avant l'étape suivante.
 - Feedback d'Anthony sur l'exercice 04 : énoncé pas assez précis, il a dû
   choisir des valeurs « au pif ». **Les énoncés d'exercices doivent
   spécifier toutes les valeurs attendues** (ou dire explicitement que le

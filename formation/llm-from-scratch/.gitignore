@@ -2,3 +2,5 @@
 .venv/
 # Caches de bytecode Python
 __pycache__/
+# Bac à sable du mini-agent (07) : contenu généré, pas du code
+workspace/
