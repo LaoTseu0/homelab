@@ -77,16 +77,21 @@ docker run -d --gpus all \
   l'agent) parlent au LLM.
 - `--restart unless-stopped` : redémarre avec la machine.
 
-**Modèle installé :**
+**Modèles installés :**
 
 ```bash
 docker exec ollama ollama pull qwen3:4b-instruct-2507-q4_K_M
+docker exec ollama ollama pull nomic-embed-text
 ```
 
 **Qwen3 4B Instruct 2507** (quantization q4_K_M, ~2,5 Go) :
 - variante **non-thinking** (pas de blocs `<think>` — indispensable en voix) ;
 - **tool calling** (pilotage des entités HA) ;
 - ~3 Go de VRAM occupés → laisse de la marge sur les 6 Go pour la suite.
+
+**nomic-embed-text** (~270 Mo) : modèle d'**embeddings** (texte → vecteur,
+pas de génération) pour le RAG sur la doc du homelab (formation module 2).
+Endpoint `/api/embed` ; ne monopolise pas la VRAM en dehors des appels.
 
 **Tests de validation :**
 

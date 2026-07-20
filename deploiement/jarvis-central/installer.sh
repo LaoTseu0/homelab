@@ -25,8 +25,10 @@ echo "== 2/4 Conteneurs (docker compose) =="
 docker volume inspect ollama >/dev/null 2>&1 || docker volume create ollama
 sudo cp "$DIR/docker-compose.yml" /srv/jarvis/docker-compose.yml
 docker compose -f /srv/jarvis/docker-compose.yml up -d
-# Modèle LLM (no-op rapide s'il est déjà présent dans le volume)
+# Modèles (no-op rapide s'ils sont déjà présents dans le volume)
 docker exec ollama ollama pull qwen3:4b-instruct-2507-q4_K_M
+# Embeddings pour le RAG de la doc (formation module 2, ~270 Mo)
+docker exec ollama ollama pull nomic-embed-text
 
 echo "== 3/4 wyoming-satellite (sur l'hôte — voir etat.md §2.4) =="
 if [ ! -d "$HOME/wyoming-satellite" ]; then
