@@ -27,10 +27,15 @@ avec des **evals dès la v1** — la partie la plus valorisable du module.
 
 ## Checklist v1 — le RAG entièrement à la main
 
-- [ ] **01_embeddings.py** — premier embedding : texte → vecteur via
-      `/api/embed` ; regarder la forme du résultat (dimensions, valeurs)
-- [ ] **02_similarite.py** — similarité cosinus écrite à la main ;
-      vérifier que « proche en sens » = « score élevé » sur des phrases test
+- [x] **01_embeddings.py** — premier embedding : texte → vecteur via
+      `/api/embed` ; 768 dims quelle que soit la longueur du texte,
+      norme toujours égale à 1
+- [x] **02_similarite.py** — `similarite_cosinus()` **écrite par Anthony
+      du premier coup** (squelette à trous, protocole de test fourni avec
+      valeurs attendues — les 5 paires OK) ; détour pédagogique réussi par
+      la géométrie (schémas + widget interactif : flèches, Pythagore,
+      produit scalaire = alignement, division par les normes = on ne garde
+      que l'angle)
 - [ ] **03_chunking.py** — découper les `.md` du repo en chunks
       (par sections markdown), avec le fichier source gardé en métadonnée
 - [ ] **04_indexer.py** — pipeline chunk → embedding → SQLite
@@ -60,13 +65,25 @@ avec des **evals dès la v1** — la partie la plus valorisable du module.
 
 | Notion | Vue dans | L'essentiel |
 |---|---|---|
-| _(à remplir au fil des étapes)_ | | |
+| Embedding = coordonnées du sens | 01 | texte → vecteur 768 floats (analogie RGB : ressemblance devenue distance calculable) ; taille fixe quelle que soit la longueur du texte ; aucune dimension n'a de sens seule |
+| Vecteurs Ollama normés à 1 | 01 | `/api/embed` renvoie des vecteurs de norme 1 (vérifié) → le dénominateur du cosinus vaut ~1, cos ≈ produit scalaire |
+| Norme = Pythagore en 768D | 02 | somme des carrés = longueur² ; `sqrt` défait les carrés pour revenir à une longueur |
+| Produit scalaire = alignement | 02 | somme des produits terme à terme ; grand si les flèches sont d'accord, 0 si perpendiculaires, négatif si opposées — mais mélange direction et longueur |
+| Cosinus = angle pur | 02 | produit scalaire / (norme × norme) : la division retire les longueurs, seule la direction (le sens) reste |
+| `zip(v1, v2)` + expression génératrice | 02 | parcourir deux listes en parallèle ; `sum(a*b for a, b in zip(...))` = produit scalaire en une ligne |
+| L'espace est multilingue | test 02 | question FR vs sa traduction EN : 0.81, la paire la plus proche du banc — le sens a une position, pas la langue ; un RAG FR peut interroger de la doc EN |
+| Le score absolu ne veut rien dire | test 02 | backup NAS vs tarte aux pommes : 0.53, pas 0 — les scores se tassent dans une bande étroite ; **seul le classement compte** (d'où le top-k, jamais de seuil absolu) |
 
 ## Points de vigilance / à revoir
 
 - Leçon du Module 1 (exercice 08) : pour les exercices denses, fournir un
   **squelette à trous** ou découper en sous-fonctions — c'est l'assemblage
-  qui coûte, pas la syntaxe.
+  qui coûte, pas la syntaxe. **Validé sur l'exercice 02** : fonction juste
+  du premier coup.
+- Anthony apprend mieux avec du **visuel** : les schémas (SVG/widgets
+  interactifs) pour les concepts géométriques/abstraits ont très bien
+  fonctionné pour produit scalaire/norme/cosinus — réutiliser l'approche
+  (chunking, espace vectoriel, HNSW à venir).
 - Les énoncés d'exercices doivent **spécifier toutes les valeurs attendues**.
 - `nomic-embed-text` : ajouté à `deploiement/jarvis-central/installer.sh`
   (config-as-code, réflexe d'Anthony) — déployer via commit + git pull +
