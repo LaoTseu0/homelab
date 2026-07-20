@@ -1,0 +1,7 @@
+# Patterns valables pour tout le repo (chaque dossier peut ajouter
+# son .gitignore local pour ses cas spécifiques).
+
+# Environnements virtuels Python (dépendances locales, jamais versionnées)
+.venv/
+# Caches de bytecode Python
+__pycache__/

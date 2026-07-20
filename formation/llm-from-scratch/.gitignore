@@ -1,6 +1,3 @@
-# Environnement virtuel Python (dépendances locales, jamais versionnées)
-.venv/
-# Caches de bytecode Python
-__pycache__/
+# (.venv/ et __pycache__/ sont ignorés par le .gitignore racine)
 # Bac à sable du mini-agent (07) : contenu généré, pas du code
 workspace/
