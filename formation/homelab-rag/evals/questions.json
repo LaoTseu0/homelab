@@ -1,0 +1,62 @@
+[
+  {
+    "question": "Qu'est-ce qu'on avait decide pour le backup du NAS ?",
+    "fichier_attendu": "backlog.md",
+    "mots_cles": ["rsync"]
+  },
+  {
+    "question": "Quel modele LLM tourne sur jarvis-central ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["qwen3"]
+  },
+  {
+    "question": "Quelle est l'adresse IP de jarvis-central ?",
+    "fichier_attendu": "architecture/reseau.md",
+    "mots_cles": ["192.168.1.57"]
+  },
+  {
+    "question": "Quel modele Whisper est utilise pour la reconnaissance vocale ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["small-int8"]
+  },
+  {
+    "question": "Quelle voix est utilisee pour la synthese vocale de Jarvis ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["siwis"]
+  },
+  {
+    "question": "Comment s'appelle le modele de mot de reveil utilise par openWakeWord ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["hey_jarvis"]
+  },
+  {
+    "question": "Quel micro est utilise pour le satellite vocal du salon ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["xvf3800"]
+  },
+  {
+    "question": "Comment fonctionne le serveur git du homelab ?",
+    "fichier_attendu": "architecture/nas.md",
+    "mots_cles": ["bare"]
+  },
+  {
+    "question": "Quel GPU equipe jarvis-core et pour quel role ?",
+    "fichier_attendu": "architecture/inference.md",
+    "mots_cles": ["4090"]
+  },
+  {
+    "question": "Comment reconstruire le serveur jarvis-central de zero ?",
+    "fichier_attendu": "deploiement/jarvis-central/README.md",
+    "mots_cles": ["installer.sh"]
+  },
+  {
+    "question": "Sur quel port l'API d'Ollama ecoute-t-elle ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["11434"]
+  },
+  {
+    "question": "Pourquoi la variante non-thinking de Qwen3 a-t-elle ete choisie ?",
+    "fichier_attendu": "serveurs/jarvis-central/etat.md",
+    "mots_cles": ["thinking"]
+  }
+]
