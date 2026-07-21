@@ -1,4 +1,0 @@
-# Dependances du projet — installees au fil des etapes
-httpx>=0.28      # client HTTP (appels a l'API Ollama)
-pydantic>=2.0    # validation de donnees a l'execution (08_structured)
-ipykernel>=7.0   # noyau Jupyter pour le notebook 04_sampling
