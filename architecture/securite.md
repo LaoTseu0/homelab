@@ -3,7 +3,7 @@
 > Posture de sécurité actuelle (honnête, sans complaisance), risques
 > identifiés, et mesures proposées classées must-have / nice-to-have.
 > Les actions retenues sont suivies dans [../backlog.md](../backlog.md).
-> Dernière mise à jour : 18 juillet 2026
+> Dernière mise à jour : 23 juillet 2026
 > Statut : **ébauche** — mesures proposées, arbitrage à venir
 
 ---
@@ -25,6 +25,7 @@
 |---|---|---|
 | Exposition Internet | ✅ aucune | LAN only, pas de port forwardé sur la box |
 | Cloisonnement NAS | ✅ bon | comptes `pinas` / groupe `agents` / `oce` séparés |
+| Miroir GitHub du NAS (sortant) | ⚠️ | premier flux sortant du homelab : le contenu des dépôts miroités quitte le LAN. Exige **dépôts privés** + **zéro secret versionné** ; clé sans passphrase sur la microSD, limitée par une **Deploy Key** par dépôt (voir [nas.md](nas.md) §4) |
 | SSH jarvis-central | ⚠️ | mot de passe encore accepté |
 | Pare-feu jarvis-central | ❌ | aucun (UFW non configuré) |
 | API Ollama (11434) | ⚠️ | ouverte à tout le LAN, **sans authentification** |

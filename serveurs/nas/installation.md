@@ -1,9 +1,10 @@
 # NAS — installation et configuration
 
-> Procédures : comment le NAS a été monté (système, SSH, serveur git, Samba).
+> Procédures : comment le NAS a été monté (système, SSH, serveur git,
+> miroir GitHub, Samba).
 > Le pourquoi et le modèle d'accès sont dans
 > [../../architecture/nas.md](../../architecture/nas.md).
-> Dernière mise à jour : 18 juillet 2026
+> Dernière mise à jour : 23 juillet 2026
 
 ---
 
@@ -167,7 +168,174 @@ git -C /srv/git/<depot>.git log --oneline -5              # derniers commits
 
 ---
 
-## 4. Partage de fichiers (SMB / Samba)
+## 4. Miroir GitHub (hook `post-receive`)
+
+> Le pourquoi et le modèle (NAS = source de vérité, GitHub = copie) sont dans
+> [../../architecture/nas.md](../../architecture/nas.md) §4.
+> Procédure écrite le 23 juillet 2026 — **à dérouler sur le NAS** (dater cette
+> ligne « mis en place le … » une fois le test §4.6 concluant).
+
+**Principe** : on ne pousse **jamais** vers GitHub depuis un poste de travail.
+On pousse vers le NAS, et le NAS recopie vers GitHub. Le sens est
+**unidirectionnel** : NAS → GitHub. GitHub n'est qu'une copie consultable
+(et une sauvegarde hors-site de fait).
+
+Un dépôt bare peut avoir des remotes comme n'importe quel dépôt : c'est ce qui
+rend la mécanique possible.
+
+### 4.1 Clé SSH dédiée du NAS
+
+Le NAS a besoin de sa propre identité pour pousser vers GitHub. Convention
+maison (`id_ed25519_<destination>`), **sans passphrase** — le hook s'exécute
+sans humain devant :
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -N "" -C "nas -> github"
+cat ~/.ssh/id_ed25519_github.pub
+```
+
+Cette clé publique se déclare côté GitHub en **Deploy Key du dépôt concerné,
+avec la case « Allow write access »** — pas en clé de compte : une Deploy Key
+n'ouvre l'accès qu'à **ce dépôt-là**. Si le NAS est compromis, le rayon
+d'explosion se limite à ce miroir.
+
+`Settings` du dépôt → `Deploy keys` → `Add deploy key` → coller la clé,
+cocher *Allow write access*.
+
+Puis déclarer l'hôte dans `~/.ssh/config` de `pinas` :
+
+```
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile /home/pinas/.ssh/id_ed25519_github
+    IdentitiesOnly yes
+```
+
+Enregistrer l'empreinte du serveur GitHub **avant** le premier hook (un hook
+est non-interactif : il ne peut pas répondre « yes » à la question de
+confiance) :
+
+```bash
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+ssh -T git@github.com    # doit répondre : Hi <depot>! You've successfully authenticated...
+```
+
+**Symptôme si on l'oublie** : `Host key verification failed.` dans la sortie
+du `git push` du poste de travail — le push vers le NAS réussit quand même
+(voir §4.5).
+
+### 4.2 Ajouter GitHub comme remote sur le dépôt bare
+
+Le dépôt GitHub doit exister et être **vide** (pas de README ni de licence
+générés à la création : ils créeraient un historique divergent).
+
+```bash
+sudo -u pinas git -C /srv/git/homelab.git remote add github git@github.com:<compte>/homelab.git
+sudo -u pinas git -C /srv/git/homelab.git remote -v
+```
+
+Le remote local du dépôt bare s'appelle `github` ; il n'entre pas en conflit
+avec l'`origin` des clones (qui, lui, pointe vers le NAS).
+
+### 4.3 Le hook `post-receive`
+
+`post-receive` s'exécute **après** que les références ont été mises à jour dans
+le dépôt bare. Git lui passe sur l'entrée standard une ligne par référence
+poussée : `<ancien-sha> <nouveau-sha> <nom-de-la-ref>`.
+
+Fichier `/srv/git/homelab.git/hooks/post-receive` :
+Exécuter cette cmd dans le terminal pour garantir les fin de ligne Unix (LF). Pas de BOM.
+
+```sh
+cat > /srv/git/homelab.git/hooks/post-receive <<'EOF'
+#!/bin/sh
+# Miroir GitHub : recopie vers le remote "github" les refs mises a jour.
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+while read -r oldrev newrev refname
+do
+    if [ "$newrev" = "$zero" ]; then
+        git push github --delete "$refname" || echo "Miroir: echec suppression $refname"
+    else
+        git push github "$refname:$refname" || echo "Miroir: echec push $refname"
+    fi
+done
+EOF
+```
+
+Le rendre exécutable :
+
+```bash
+sudo chmod +x /srv/git/homelab.git/hooks/post-receive
+sudo chown pinas:agents /srv/git/homelab.git/hooks/post-receive
+```
+
+**Pourquoi cette forme plutôt que `git push github --all && git push github --tags`** :
+
+- on ne pousse que les références **réellement modifiées** par ce push, au lieu
+  de rejouer toutes les branches à chaque fois ;
+- `refname:refname` couvre d'un seul geste les **branches** (`refs/heads/…`)
+  **et** les **tags** (`refs/tags/…`) — pas besoin d'un `--tags` séparé ;
+- une branche supprimée sur le NAS est supprimée sur GitHub : le miroir reste
+  fidèle à la source de vérité, sinon GitHub accumulerait des branches mortes.
+
+> Variante non retenue : `git push github --mirror`, qui aligne GitHub sur le
+> NAS d'un bloc (suppressions comprises). Plus radical — il écrase **tout** ce
+> qui existe côté GitHub, y compris une référence créée par erreur depuis
+> l'interface web. À réserver à une resynchronisation manuelle.
+
+### 4.4 Qui exécute le hook — la limite à connaître
+
+Le hook tourne sous **le compte Unix qui a poussé**, pas sous un compte de
+service. La clé GitHub vivant dans `/home/pinas/.ssh/` (permissions `600`),
+le miroir ne fonctionne donc aujourd'hui **que pour les pushes faits en tant
+que `pinas`** — ce qui couvre les postes humains (`pc-admin` se connecte en
+`pinas`).
+
+**Symptôme le jour où un compte du groupe `agents` poussera** :
+`git@github.com: Permission denied (publickey)` dans la sortie du push, le
+dépôt NAS étant à jour malgré tout.
+
+Rendre la clé lisible par le groupe n'est pas une bonne réponse : elle donnerait
+à tous les agents un droit d'écriture sur GitHub, et `ssh` refuse de son côté une
+clé privée trop permissive quand son propriétaire s'en sert (`UNPROTECTED PRIVATE
+KEY FILE`). La piste propre, le moment venu : le hook dépose un marqueur, et une
+unité systemd tournant en `pinas` fait le push. Suivi dans
+[../../backlog.md](../../backlog.md).
+
+### 4.5 Ce qui se passe si GitHub est injoignable
+
+Rien de grave, **par construction** : `post-receive` s'exécute *après* la mise à
+jour des références. Son code de retour ne peut plus annuler le push. Une panne
+GitHub, une clé expirée ou une coupure Internet produisent un message d'erreur
+dans la sortie du `git push` du poste de travail, mais **le NAS a bien reçu le
+commit**. La source de vérité n'est jamais otage du miroir.
+
+Pour rattraper un miroir en retard :
+
+```bash
+sudo -u pinas git -C /srv/git/homelab.git push github --all
+sudo -u pinas git -C /srv/git/homelab.git push github --tags
+```
+
+### 4.6 Tester
+
+Depuis un poste de travail, un push normal :
+
+```bash
+git push origin main
+```
+
+La sortie doit afficher les lignes du remote (`remote: To github.com:…`), et le
+commit apparaître sur GitHub dans la foulée. Vérification côté NAS :
+
+```bash
+sudo -u pinas git -C /srv/git/homelab.git ls-remote github main
+```
+
+---
+
+## 5. Partage de fichiers (SMB / Samba)
 
 - Service **Samba** (`smbd`) installé et actif.
 - Utilisateur **`oce`** (Océane), compte Linux **sans accès shell**

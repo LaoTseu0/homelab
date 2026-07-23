@@ -3,7 +3,7 @@
 > Ce que le NAS est, à quoi il sert, et son modèle d'accès.
 > Les procédures d'installation détaillées sont dans
 > [../serveurs/nas/installation.md](../serveurs/nas/installation.md).
-> Dernière mise à jour : 18 juillet 2026
+> Dernière mise à jour : 23 juillet 2026
 > Statut : **phase de test** (stockage sur microSD, backup SSD à venir)
 
 ---
@@ -13,11 +13,11 @@
 NAS auto-hébergé sur Raspberry Pi, destiné à deux usages :
 
 - **Serveur git** pour héberger la mémoire des agents et la doc du homelab
-  (fichiers `.md` versionnés).
+  (fichiers `.md` versionnés), avec **miroir sortant vers GitHub** (§4).
 - **Partage de fichiers (SMB)** pour un usage familial (photos, documents).
 
-Accès **local uniquement** (pas d'exposition à Internet). Un accès distant via
-VPN pourra être ajouté plus tard.
+Accès **local uniquement** (aucune exposition entrante depuis Internet). Un
+accès distant via VPN pourra être ajouté plus tard.
 
 ---
 
@@ -69,7 +69,45 @@ supplémentaire (SSH était déjà là), et aligné avec la philosophie du proje
 
 ---
 
-## 4. Modèle d'accès — résumé
+## 4. Miroir GitHub — le NAS reste la source de vérité
+
+Le NAS pousse ses dépôts vers GitHub, **jamais l'inverse**. GitHub n'est ni un
+second serveur ni un lieu de travail : c'est une **copie en lecture**, utile
+pour consulter le code hors du LAN, le partager ponctuellement, et — effet de
+bord bienvenu tant que le backup n'existe pas — disposer d'un exemplaire
+hors-site de l'historique.
+
+```
+[ poste de travail ]──push──►[ NAS  /srv/git/*.git ]──hook post-receive──►[ GitHub ]
+       clone/pull ◄──────────  SOURCE DE VÉRITÉ                              miroir
+                                                                        (lecture seule)
+```
+
+Trois propriétés définissent le montage :
+
+- **Un seul sens.** On ne pousse jamais vers GitHub depuis un poste. Une
+  modification faite via l'interface web serait écrasée ou ignorée au push
+  suivant : il n'y a qu'une source de vérité, et elle est à la maison.
+- **Déclenchement par hook.** Le dépôt bare exécute un hook `post-receive`
+  après chaque push reçu, qui recopie vers GitHub les seules références
+  modifiées. Aucun cron, aucune synchronisation périodique : le miroir suit le
+  rythme des pushes.
+- **Le miroir ne peut pas bloquer la source.** Le hook s'exécute *après* la
+  mise à jour des références : GitHub injoignable produit un avertissement,
+  jamais un push refusé. Le NAS fonctionne seul, exactement comme avant.
+
+**Pourquoi pas l'inverse** (GitHub source, NAS miroir) : le homelab doit rester
+opérationnel sans Internet, et sa doc appartient à la maison. Faire dépendre le
+travail quotidien d'un service tiers contredirait le principe « 100 % local ».
+
+**Ce que ça change côté posture** : le contenu des dépôts concernés **quitte le
+LAN**. C'est le premier flux sortant du homelab — il ne crée aucune exposition
+entrante, mais il impose deux règles : dépôts GitHub **privés**, et **aucun
+secret** dans les dépôts miroités (voir [securite.md](securite.md)).
+
+---
+
+## 5. Modèle d'accès — résumé
 
 | Qui | Outil | Accès |
 |---|---|---|
@@ -82,11 +120,21 @@ distincts, dossiers distincts, mécanismes distincts.
 
 ---
 
-## 5. Points de vigilance
+## 6. Points de vigilance
 
 - **Sauvegarde** : tant que le backup n'est pas en place, toutes les données
   vivent sur la **seule microSD**. Les dépôts git sont protégés s'ils sont clonés
-  ailleurs (PC), mais **les fichiers d'Océane ne le sont pas** — priorité au backup.
+  ailleurs (PC) ou miroités sur GitHub (§4), mais **les fichiers d'Océane ne le
+  sont pas** — priorité au backup.
+- **Clé GitHub du NAS** : elle vit en clair sur la microSD (sans passphrase,
+  contrainte d'un hook non-interactif). D'où le choix d'une **Deploy Key par
+  dépôt** plutôt qu'une clé de compte : elle n'ouvre l'écriture que sur le
+  dépôt miroité, pas sur l'ensemble du compte GitHub.
+- **Miroir et comptes agents** : le hook s'exécute sous le compte qui pousse ;
+  seul `pinas` dispose aujourd'hui de la clé GitHub. Les pushes des futurs
+  comptes `agents` arriveront bien sur le NAS mais ne seront pas miroités tant
+  que ce point n'est pas traité (détail et piste dans
+  [../serveurs/nas/installation.md](../serveurs/nas/installation.md) §4.4).
 - **microSD en 24/7** : usure possible à terme ; le passage à un SSD est prévu.
 - **VPN du PC** : doit être **désactivé** pour administrer le NAS en local.
 

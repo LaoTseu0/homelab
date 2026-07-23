@@ -2,7 +2,7 @@
 
 > Tout ce qui reste à faire, par thème. Les mesures de sécurité sont
 > détaillées et justifiées dans [architecture/securite.md](architecture/securite.md).
-> Dernière mise à jour : 19 juillet 2026
+> Dernière mise à jour : 23 juillet 2026
 
 ---
 
@@ -71,6 +71,13 @@
 - [ ] Acheter un **adaptateur USB-SATA** pour le SSD Kingston.
 - [ ] **Backup automatique** (rsync + cron) des dépôts git + dossier Océane vers le SSD.
 - [ ] (Plus tard) Migrer le stockage primaire microSD → disque durable.
+- [ ] **Miroir GitHub pour les comptes `agents`** : le hook `post-receive`
+      s'exécute sous le compte qui pousse, et seul `pinas` a la clé GitHub —
+      les pushes des agents ne seront donc pas miroités. Piste : le hook dépose
+      un marqueur, une unité systemd en `pinas` fait le push
+      (serveurs/nas/installation.md §4.4).
+- [ ] **Étendre le miroir à `memoire-agent.git`** si le besoin se confirme —
+      vérifier d'abord qu'aucun secret n'y est versionné (dépôt privé exigé).
 - [ ] (Optionnel) Clés SSH dédiées par agent + comptes par agent.
 - [ ] (Optionnel) Accès distant via VPN (routeur Asus RT-AX86U Pro).
 - [ ] (Optionnel) Passphrase sur les clés SSH de pc-admin.

@@ -5,3 +5,6 @@
 .venv/
 # Caches de bytecode Python
 __pycache__/
+
+# Config locale de l'éditeur Obsidian (préférences machine, pas de la doc)
+.obsidian/

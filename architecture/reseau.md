@@ -35,13 +35,13 @@ Internet ═══ [ Box Bouygues ] ─── LAN 192.168.1.0/24 (Ethernet + WiF
 
 ## 2. Adressage des machines
 
-| Machine | Hostname | IP | Connexion | Réservation DHCP |
-|---|---|---|---|---|
-| NAS (Pi 4) | `nas` | **192.168.1.80** | Ethernet | ❌ à faire |
-| Serveur Jarvis | `jarvis-central` | **192.168.1.57** | Ethernet | ❌ à faire |
-| Tour d'inférence LLM | `jarvis-core` | **192.168.1.187** | Ethernet | ❌ à faire |
-| PC portable Asus ROG (admin) | `pc-admin` | à constater | Ethernet | ❌ à faire |
-| Satellites (futurs) | — | — | WiFi | à réserver à l'ajout |
+| Machine                      | Hostname         | IP                | Connexion | Réservation DHCP     |
+| ---------------------------- | ---------------- | ----------------- | --------- | -------------------- |
+| NAS (Pi 4)                   | `nas`            | **192.168.1.80**  | Ethernet  | ❌ à faire            |
+| Serveur Jarvis               | `jarvis-central` | **192.168.1.57**  | Ethernet  | ❌ à faire            |
+| Tour d'inférence LLM         | `jarvis-core`    | **192.168.1.187** | Ethernet  | ❌ à faire            |
+| PC portable Asus ROG (admin) | `pc-admin`       | à constater       | Ethernet  | ❌ à faire            |
+| Satellites (futurs)          | —                | —                 | WiFi      | à réserver à l'ajout |
 
 > ⚠️ Tant que les réservations DHCP ne sont pas faites sur la box, ces IP
 > sont *stables en pratique* mais *non garanties* (un renouvellement de bail
@@ -58,17 +58,17 @@ Internet ═══ [ Box Bouygues ] ─── LAN 192.168.1.0/24 (Ethernet + WiF
 
 ## 4. Matrice des services (qui écoute où)
 
-| Machine | Port | Service | Clients légitimes |
-|---|---|---|---|
-| nas | 22 | SSH (git + admin) | pc-admin, jarvis-central |
-| nas | 445 | SMB (partages Océane et antho) | pc-admin / téléphones de la famille |
-| jarvis-core | 22 | SSH admin | pc-admin |
-| jarvis-core | *(prévu)* | API d'inférence LLM — port à définir (voir [inference.md](inference.md) §6) | jarvis-central uniquement |
-| jarvis-central | 22 | SSH admin | pc-admin |
-| jarvis-central | 8123 | Home Assistant (web) | pc-admin / téléphones de la famille |
-| jarvis-central | 11434 | API Ollama (Qwen3 4B, voix) | local uniquement (HA, future couche agentique) |
-| jarvis-central | 10200 / 10300 / 10400 | Wyoming (piper / whisper / openwakeword) | local uniquement (HA, satellite) |
-| jarvis-central | 10700 | wyoming-satellite « bureau » | local uniquement (HA) |
+| Machine        | Port                  | Service                                                                     | Clients légitimes                              |
+| -------------- | --------------------- | --------------------------------------------------------------------------- | ---------------------------------------------- |
+| nas            | 22                    | SSH (git + admin)                                                           | pc-admin, jarvis-central                       |
+| nas            | 445                   | SMB (partages Océane et antho)                                              | pc-admin / téléphones de la famille            |
+| jarvis-core    | 22                    | SSH admin                                                                   | pc-admin                                       |
+| jarvis-core    | *(prévu)*             | API d'inférence LLM — port à définir (voir [inference.md](inference.md) §6) | jarvis-central uniquement                      |
+| jarvis-central | 22                    | SSH admin                                                                   | pc-admin                                       |
+| jarvis-central | 8123                  | Home Assistant (web)                                                        | pc-admin / téléphones de la famille            |
+| jarvis-central | 11434                 | API Ollama (Qwen3 4B, voix)                                                 | local uniquement (HA, future couche agentique) |
+| jarvis-central | 10200 / 10300 / 10400 | Wyoming (piper / whisper / openwakeword)                                    | local uniquement (HA, satellite)               |
+| jarvis-central | 10700                 | wyoming-satellite « bureau »                                                | local uniquement (HA)                          |
 
 > Sens du flux LLM : `jarvis-central` est **cliente** de la future API de
 > `jarvis-core` (le moteur), jamais l'inverse — voir [inference.md](inference.md) §3.
