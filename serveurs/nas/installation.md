@@ -4,7 +4,7 @@
 > miroir GitHub, Samba).
 > Le pourquoi et le modèle d'accès sont dans
 > [../../architecture/nas.md](../../architecture/nas.md).
-> Dernière mise à jour : 23 juillet 2026
+> Dernière mise à jour : 24 juillet 2026
 
 ---
 
