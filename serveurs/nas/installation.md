@@ -318,6 +318,20 @@ sudo -u pinas git -C /srv/git/homelab.git push github --all
 sudo -u pinas git -C /srv/git/homelab.git push github --tags
 ```
 
+> **Note du 14 août 2026 — le cas non couvert : GitHub a divergé.**
+> Si GitHub porte un commit absent du NAS (PR fusionnée sur GitHub, édition
+> web), le push du hook est refusé en *non-fast-forward*. Ce n'est pas un
+> retard : **le rattrapage ci-dessus échoue de la même façon**. Le hook
+> n'affiche qu'un `Miroir: echec push <ref>` noyé dans la sortie du push, et
+> l'erreur se répète à chaque push suivant tant que personne n'arbitre.
+>
+> Survenu sur `inference-au-harnais` : la PR #1 avait été fusionnée sur GitHub
+> alors qu'elle ne portait que le premier de trois commits. Résolu à la main
+> depuis un clone, sans rien détruire —
+> `git fetch <url-github> main`, `git merge FETCH_HEAD`, `git push origin main`.
+>
+> **Le hook n'a pas été modifié** : le rendre bavard sur ce cas reste à faire.
+
 ### 4.6 Tester
 
 Depuis un poste de travail, un push normal :
