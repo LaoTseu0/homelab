@@ -244,96 +244,31 @@ avec l'`origin` des clones (qui, lui, pointe vers le NAS).
 le dépôt bare. Git lui passe sur l'entrée standard une ligne par référence
 poussée : `<ancien-sha> <nouveau-sha> <nom-de-la-ref>`.
 
-Le hook est **versionné** dans
-[../../deploiement/nas/post-receive](../../deploiement/nas/post-receive) et
-déployé par `installer-miroir.sh` (voir §4.3bis) — il n'est jamais écrit à la
-main sur le NAS. Le voici pour lecture :
+Fichier `/srv/git/homelab.git/hooks/post-receive` :
+Exécuter cette cmd dans le terminal pour garantir les fin de ligne Unix (LF). Pas de BOM.
 
 ```sh
+cat > /srv/git/homelab.git/hooks/post-receive <<'EOF'
 #!/bin/sh
 # Miroir GitHub : recopie vers le remote "github" les refs mises a jour.
-# Ce hook s'execute apres coup : son code de retour est ignore par git et ne
-# peut jamais bloquer la source de verite. Il doit donc etre bruyant.
 zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
-echec=0
-
 while read -r oldrev newrev refname
 do
     if [ "$newrev" = "$zero" ]; then
-        git push github --delete "$refname" || {
-            echec=1
-            echo "Miroir: echec suppression $refname"
-        }
-        continue
-    fi
-
-    git push github "$refname:$refname" && continue
-    echec=1
-
-    # Le push a echoue : distinguer l'injoignable de la divergence.
-    if git fetch -q github "$refname" 2>/dev/null; then
-        distant=$(git rev-parse FETCH_HEAD)
-        if git merge-base --is-ancestor "$distant" "$newrev"; then
-            echo "Miroir: echec push $refname (pas de divergence, cause inconnue)."
-        else
-            echo "Miroir: ================ DIVERGENCE $refname ================"
-            echo "Miroir:   NAS    $newrev"
-            echo "Miroir:   GitHub $distant"
-            echo "Miroir: GitHub porte du travail absent du NAS (merge de PR ou"
-            echo "Miroir: edition web). Le miroir restera bloque jusqu'a arbitrage."
-            echo "Miroir:"
-            echo "Miroir: -- Recuperer ce travail (recommande), depuis un clone :"
-            echo "Miroir:      git fetch $(git config remote.github.url) $refname"
-            echo "Miroir:      git merge FETCH_HEAD && git push origin"
-            echo "Miroir:"
-            echo "Miroir: -- Ou imposer le NAS, en DETRUISANT le travail GitHub :"
-            echo "Miroir:      git -C $PWD push --force-with-lease github '$refname:$refname'"
-            echo "Miroir: ======================================================"
-        fi
+        git push github --delete "$refname" || echo "Miroir: echec suppression $refname"
     else
-        echo "Miroir: GitHub injoignable ou clef refusee ($refname)."
-        echo "Miroir: Le NAS a bien recu le commit. Reessayer plus tard :"
-        echo "Miroir:   git -C $PWD push github '$refname:$refname'"
+        git push github "$refname:$refname" || echo "Miroir: echec push $refname"
     fi
 done
-
-[ "$echec" -eq 0 ] || echo "Miroir: >>> AU MOINS UNE REFERENCE N'EST PAS MIROITEE <<<"
+EOF
 ```
 
-### 4.3bis Déployer le hook
-
-Sur le NAS, en tant que `pinas`. Le NAS n'héberge que des dépôts *bare* : il
-faut un clone de travail pour disposer des fichiers. La première fois
-seulement :
+Le rendre exécutable :
 
 ```bash
-git clone /srv/git/homelab.git ~/homelab
+sudo chmod +x /srv/git/homelab.git/hooks/post-receive
+sudo chown pinas:agents /srv/git/homelab.git/hooks/post-receive
 ```
-
-Puis, à chaque déploiement :
-
-```bash
-cd ~/homelab && git pull
-cd deploiement/nas && ./installer-miroir.sh
-```
-
-Le script parcourt `/srv/git/*.git`, installe le hook sur **tout dépôt déclarant
-un remote `github`**, ignore les autres, saute ceux déjà à jour, et sauvegarde
-l'ancienne version en `post-receive.bak`. Il pose aussi les permissions
-(`775`, groupe `agents`) et refuse de rien installer si le hook source a une
-erreur de syntaxe.
-
-Vérifier après coup :
-
-```bash
-md5sum ~/homelab/deploiement/nas/post-receive /srv/git/*/hooks/post-receive
-```
-
-> **Ne pas éditer le hook directement sur le NAS.** La modification serait
-> écrasée au déploiement suivant, et ne profiterait pas aux autres dépôts.
-> Le fichier versionné est la seule source. Corollaire pour Windows : le dépôt
-> a un `.gitattributes` — s'assurer que `post-receive` arrive sur le NAS en
-> fins de ligne **LF**, sans BOM, sinon `/bin/sh` refuse le shebang.
 
 **Pourquoi cette forme plutôt que `git push github --all && git push github --tags`** :
 
@@ -348,22 +283,6 @@ md5sum ~/homelab/deploiement/nas/post-receive /srv/git/*/hooks/post-receive
 > NAS d'un bloc (suppressions comprises). Plus radical — il écrase **tout** ce
 > qui existe côté GitHub, y compris une référence créée par erreur depuis
 > l'interface web. À réserver à une resynchronisation manuelle.
-
-**Pourquoi le hook diagnostique au lieu de forcer** : un `push` simple échoue
-pour deux raisons très différentes — GitHub est injoignable (transitoire, il
-suffit de réessayer), ou GitHub a divergé (durable, il faut arbitrer). Les
-distinguer demande de savoir si la référence distante est un ancêtre de la
-locale, donc de la récupérer : c'est le rôle du `git fetch` en cas d'échec, qui
-sert à la fois de test de joignabilité et de source de l'objet à comparer.
-
-Le hook **ne force jamais de lui-même**. Un `--force` automatique effacerait
-sans confirmation un merge de *pull request* fait sur GitHub — c'est
-précisément l'incident survenu le 14 août 2026 (voir §4.5). Décrocher
-bruyamment est réparable ; écraser ne l'est pas.
-
-La variable `echec` et son récapitulatif final existent parce que la sortie
-d'un `post-receive` se noie facilement dans celle du `push` : sans cette
-dernière ligne, un échec sur une branche parmi plusieurs passe inaperçu.
 
 ### 4.4 Qui exécute le hook — la limite à connaître
 
@@ -384,12 +303,7 @@ KEY FILE`). La piste propre, le moment venu : le hook dépose un marqueur, et un
 unité systemd tournant en `pinas` fait le push. Suivi dans
 [../../backlog.md](../../backlog.md).
 
-### 4.5 Quand le miroir décroche
-
-Deux incidents distincts, à ne pas confondre : le hook les nomme explicitement
-dans sa sortie.
-
-#### a. GitHub injoignable — transitoire
+### 4.5 Ce qui se passe si GitHub est injoignable
 
 Rien de grave, **par construction** : `post-receive` s'exécute *après* la mise à
 jour des références. Son code de retour ne peut plus annuler le push. Une panne
@@ -397,70 +311,12 @@ GitHub, une clé expirée ou une coupure Internet produisent un message d'erreur
 dans la sortie du `git push` du poste de travail, mais **le NAS a bien reçu le
 commit**. La source de vérité n'est jamais otage du miroir.
 
-Message du hook :
-
-```
-Miroir: GitHub injoignable ou clef refusee (refs/heads/main).
-```
-
-Pour rattraper un miroir simplement en retard :
+Pour rattraper un miroir en retard :
 
 ```bash
 sudo -u pinas git -C /srv/git/homelab.git push github --all
 sudo -u pinas git -C /srv/git/homelab.git push github --tags
 ```
-
-#### b. GitHub a divergé — durable, demande un arbitrage
-
-GitHub porte un commit que le NAS n'a pas : merge de *pull request*, édition via
-l'interface web, push direct. La règle du sens unique
-([../../architecture/nas.md](../../architecture/nas.md) §4) a été enfreinte.
-
-> **Le rattrapage ci-dessus ne résout pas ce cas.** `push --all` échoue
-> exactement de la même façon : le refus est un *non-fast-forward*, pas un
-> problème de retard. Tant que personne n'arbitre, le miroir reste bloqué et
-> **chaque push suivant réaffiche l'erreur**.
-
-Message du hook :
-
-```
-Miroir: ================ DIVERGENCE refs/heads/main ================
-Miroir:   NAS    1dda8ed…
-Miroir:   GitHub cba837a…
-```
-
-**Issue 1 — récupérer le travail GitHub (par défaut).** Non destructif : le
-commit distant entre dans l'historique du NAS, et le miroir repart en
-*fast-forward*. Depuis un clone de travail :
-
-```bash
-git fetch git@github.com:COMPTE_GITHUB/homelab.git main
-git merge FETCH_HEAD
-git push origin main
-```
-
-Si le contenu était déjà présent côté NAS — cas d'une PR qui ne portait qu'une
-partie des commits — le merge ne change aucun fichier et ne fait que réunir les
-deux historiques. Vérifiable avant de pousser :
-
-```bash
-git diff --stat HEAD@{1} HEAD     # sortie vide = aucun changement de contenu
-```
-
-**Issue 2 — imposer le NAS.** **Destructif** : les commits présents seulement
-sur GitHub disparaissent, et une PR fusionnée là-bas est perdue. À ne choisir
-qu'après avoir constaté que le travail distant n'a aucune valeur.
-
-```bash
-sudo -u pinas git -C /srv/git/homelab.git push --force-with-lease github 'refs/heads/main:refs/heads/main'
-```
-
-**Incident de référence — 14 août 2026, `inference-au-harnais`.** La PR #1 avait
-été fusionnée sur GitHub alors qu'elle ne portait que le premier de trois
-commits. GitHub s'est retrouvé avec un commit de merge absent du NAS ; le miroir
-a décroché sans que rien ne le signale, l'ancien hook se contentant d'un
-`echo` noyé dans la sortie. Résolu par l'issue 1. C'est cet incident qui a
-motivé le hook diagnostique de §4.3.
 
 ### 4.6 Tester
 
