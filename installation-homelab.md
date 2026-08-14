@@ -609,24 +609,20 @@ sudo -u pinas git -C /srv/git/homelab.git remote set-url github "git@github.com:
 
 ### 7.4 Installer le hook `post-receive`
 
-```bash
-cat > /srv/git/homelab.git/hooks/post-receive <<'EOF'
-#!/bin/sh
-# Recopie vers GitHub uniquement les références modifiées.
-zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
-while read -r oldrev newrev refname
-do
-    if [ "$newrev" = "$zero" ]; then
-        git push github --delete "$refname" || echo "Miroir: echec suppression $refname"
-    else
-        git push github "$refname:$refname" || echo "Miroir: echec push $refname"
-    fi
-done
-EOF
+Le hook est versionné dans le dépôt — on ne l'écrit pas à la main. Depuis un
+clone du repo sur le NAS, en tant que `pinas` :
 
-chmod +x /srv/git/homelab.git/hooks/post-receive
-sudo chown pinas:agents /srv/git/homelab.git/hooks/post-receive
+```bash
+cd ~/homelab/deploiement/nas
+./installer-miroir.sh
 ```
+
+Le script installe le hook sur **tous** les dépôts de `/srv/git/` ayant un
+remote `github`, sauvegarde l'ancienne version en `post-receive.bak` et pose
+les permissions. Il est idempotent.
+
+Détail du hook et de ce qu'il diagnostique :
+[serveurs/nas/installation.md](serveurs/nas/installation.md) §4.3.
 
 ### 7.5 Tester le miroir
 
@@ -642,12 +638,18 @@ Puis sur le NAS :
 sudo -u pinas git -C /srv/git/homelab.git ls-remote github main
 ```
 
-Rattrapage manuel si le miroir a pris du retard :
+Rattrapage manuel si le miroir a pris du **retard** (GitHub avait été
+injoignable) :
 
 ```bash
 sudo -u pinas git -C /srv/git/homelab.git push github --all
 sudo -u pinas git -C /srv/git/homelab.git push github --tags
 ```
+
+> Si le hook affiche `DIVERGENCE`, ce rattrapage **ne s'applique pas** et
+> échouera de la même façon : GitHub porte un commit absent du NAS, il faut
+> arbitrer. Procédure complète dans
+> [serveurs/nas/installation.md](serveurs/nas/installation.md) §4.5.
 
 Le hook s'exécute avec l'identité Unix qui pousse. Comme la clé GitHub est
 privée à `pinas`, les pushes effectués sous `jarvisc` ou un autre compte agent

@@ -78,6 +78,13 @@
       (serveurs/nas/installation.md §4.4).
 - [ ] **Étendre le miroir à `memoire-agent.git`** si le besoin se confirme —
       vérifier d'abord qu'aucun secret n'y est versionné (dépôt privé exigé).
+- [ ] **Décider du sort des pull requests sur GitHub.** La règle « un seul
+      sens » (architecture/nas.md §4) interdit d'y travailler, mais rien ne
+      l'empêche techniquement : la PR #1 de `inference-au-harnais` a été
+      fusionnée sur GitHub le 14 août 2026 et a bloqué le miroir jusqu'à
+      réconciliation manuelle. Deux options — désactiver les PR côté GitHub
+      (branche protégée / dépôt en lecture seule), ou assumer le modèle à deux
+      pairs et documenter la réconciliation comme un geste normal.
 - [ ] (Optionnel) Clés SSH dédiées par agent + comptes par agent.
 - [ ] (Optionnel) Accès distant via VPN (routeur Asus RT-AX86U Pro).
 - [ ] (Optionnel) Passphrase sur les clés SSH de pc-admin.

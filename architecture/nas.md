@@ -83,11 +83,11 @@ hors-site de l'historique.
                                                                         (lecture seule)
 ```
 
-Trois propriétés définissent le montage :
+Quatre propriétés définissent le montage :
 
-- **Un seul sens.** On ne pousse jamais vers GitHub depuis un poste. Une
-  modification faite via l'interface web serait écrasée ou ignorée au push
-  suivant : il n'y a qu'une source de vérité, et elle est à la maison.
+- **Un seul sens.** On ne pousse jamais vers GitHub depuis un poste, et on n'y
+  travaille pas : ni édition via l'interface web, ni fusion de *pull request*.
+  Il n'y a qu'une source de vérité, et elle est à la maison.
 - **Déclenchement par hook.** Le dépôt bare exécute un hook `post-receive`
   après chaque push reçu, qui recopie vers GitHub les seules références
   modifiées. Aucun cron, aucune synchronisation périodique : le miroir suit le
@@ -95,6 +95,13 @@ Trois propriétés définissent le montage :
 - **Le miroir ne peut pas bloquer la source.** Le hook s'exécute *après* la
   mise à jour des références : GitHub injoignable produit un avertissement,
   jamais un push refusé. Le NAS fonctionne seul, exactement comme avant.
+- **Une entorse à la règle du sens unique bloque le miroir, et ne se résout pas
+  toute seule.** Si GitHub reçoit malgré tout un commit absent du NAS, le push
+  du hook est refusé (*non-fast-forward*) et le miroir décroche jusqu'à
+  arbitrage humain. Le hook ne force **jamais** : écraser du travail en silence
+  serait pire que de décrocher. Il diagnostique, affiche les deux issues
+  possibles et laisse choisir — procédure dans
+  [../serveurs/nas/installation.md](../serveurs/nas/installation.md) §4.5.
 
 **Pourquoi pas l'inverse** (GitHub source, NAS miroir) : le homelab doit rester
 opérationnel sans Internet, et sa doc appartient à la maison. Faire dépendre le
