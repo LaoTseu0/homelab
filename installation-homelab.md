@@ -609,10 +609,12 @@ sudo -u pinas git -C /srv/git/homelab.git remote set-url github "git@github.com:
 
 ### 7.4 Installer le hook `post-receive`
 
-Le hook est versionné dans le dépôt — on ne l'écrit pas à la main. Depuis un
-clone du repo sur le NAS, en tant que `pinas` :
+Le hook est versionné dans le dépôt — on ne l'écrit pas à la main. Sur le NAS,
+en tant que `pinas` (le clone de travail n'existe pas d'office, le NAS
+n'hébergeant que des dépôts *bare*) :
 
 ```bash
+git clone /srv/git/homelab.git ~/homelab     # la premiere fois seulement
 cd ~/homelab/deploiement/nas
 ./installer-miroir.sh
 ```

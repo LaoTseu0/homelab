@@ -302,11 +302,19 @@ done
 
 ### 4.3bis Déployer le hook
 
-Sur le NAS, en tant que `pinas` :
+Sur le NAS, en tant que `pinas`. Le NAS n'héberge que des dépôts *bare* : il
+faut un clone de travail pour disposer des fichiers. La première fois
+seulement :
 
 ```bash
-cd ~/homelab/deploiement/nas
-./installer-miroir.sh
+git clone /srv/git/homelab.git ~/homelab
+```
+
+Puis, à chaque déploiement :
+
+```bash
+cd ~/homelab && git pull
+cd deploiement/nas && ./installer-miroir.sh
 ```
 
 Le script parcourt `/srv/git/*.git`, installe le hook sur **tout dépôt déclarant

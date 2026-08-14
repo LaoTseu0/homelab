@@ -12,13 +12,20 @@
 | `post-receive` | `/srv/git/<depot>.git/hooks/` | Recopie vers GitHub les refs modifiées ; diagnostique les échecs |
 | `installer-miroir.sh` | — | Installe le hook sur tout dépôt ayant un remote `github` (idempotent) |
 
-## Déployer (ou re-déployer après un git pull)
+## Déployer
 
-Sur le NAS, en tant que `pinas` :
+Sur le NAS, en tant que `pinas`. La première fois, cloner le dépôt depuis le
+bare local — il n'y a pas de clone de travail sur le NAS par défaut :
 
 ```bash
-cd ~/homelab/deploiement/nas
-./installer-miroir.sh
+git clone /srv/git/homelab.git ~/homelab
+```
+
+Puis, à chaque déploiement :
+
+```bash
+cd ~/homelab && git pull
+cd deploiement/nas && ./installer-miroir.sh
 ```
 
 Le script ignore les dépôts sans remote `github`, saute ceux déjà à jour, et
