@@ -251,13 +251,15 @@ Exécuter cette cmd dans le terminal pour garantir les fin de ligne Unix (LF). P
 cat > /srv/git/homelab.git/hooks/post-receive <<'EOF'
 #!/bin/sh
 # Miroir GitHub : recopie vers le remote "github" les refs mises a jour.
+# Le NAS est la source de verite, GitHub un backup : le push est force, ce qui
+# ecrase sans preavis tout commit qui n'existerait que sur GitHub.
 zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
 while read -r oldrev newrev refname
 do
     if [ "$newrev" = "$zero" ]; then
         git push github --delete "$refname" || echo "Miroir: echec suppression $refname"
     else
-        git push github "$refname:$refname" || echo "Miroir: echec push $refname"
+        git push github --force "$refname:$refname" || echo "Miroir: echec push $refname"
     fi
 done
 EOF
@@ -318,19 +320,20 @@ sudo -u pinas git -C /srv/git/homelab.git push github --all
 sudo -u pinas git -C /srv/git/homelab.git push github --tags
 ```
 
-> **Note du 14 août 2026 — le cas non couvert : GitHub a divergé.**
-> Si GitHub porte un commit absent du NAS (PR fusionnée sur GitHub, édition
-> web), le push du hook est refusé en *non-fast-forward*. Ce n'est pas un
-> retard : **le rattrapage ci-dessus échoue de la même façon**. Le hook
-> n'affiche qu'un `Miroir: echec push <ref>` noyé dans la sortie du push, et
-> l'erreur se répète à chaque push suivant tant que personne n'arbitre.
+> **Note du 14 août 2026 — le miroir force désormais.** Le hook pousse avec
+> `--force`. C'est la traduction en code de la règle « un seul sens » (§4 de
+> [../../architecture/nas.md](../../architecture/nas.md)) : le NAS est la source
+> de vérité, GitHub un backup.
 >
-> Survenu sur `inference-au-harnais` : la PR #1 avait été fusionnée sur GitHub
-> alors qu'elle ne portait que le premier de trois commits. Résolu à la main
-> depuis un clone, sans rien détruire —
-> `git fetch <url-github> main`, `git merge FETCH_HEAD`, `git push origin main`.
+> **Conséquence assumée** : tout commit qui n'existerait que sur GitHub — PR
+> fusionnée là-bas, édition via l'interface web — est **écrasé sans préavis**
+> au push suivant. Ne jamais travailler sur GitHub.
 >
-> **Le hook n'a pas été modifié** : le rendre bavard sur ce cas reste à faire.
+> Déclencheur : la PR #1 de `inference-au-harnais` avait été fusionnée sur
+> GitHub, faisant décrocher le miroir — l'ancien push non forcé était refusé en
+> *non-fast-forward*, et le rattrapage `push --all` ci-dessus échouait de la
+> même façon puisqu'il ne s'agissait pas d'un retard. Ce cas ne peut plus se
+> produire.
 
 ### 4.6 Tester
 

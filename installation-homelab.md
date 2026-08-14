@@ -619,7 +619,7 @@ do
     if [ "$newrev" = "$zero" ]; then
         git push github --delete "$refname" || echo "Miroir: echec suppression $refname"
     else
-        git push github "$refname:$refname" || echo "Miroir: echec push $refname"
+        git push github --force "$refname:$refname" || echo "Miroir: echec push $refname"
     fi
 done
 EOF
