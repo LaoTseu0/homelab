@@ -1,10 +1,7 @@
 # jarvis-central — état courant
 
 > Photographie du serveur `jarvis-central` : le socle système, les services
-> qui tournent dessus, où vit chaque chose et pourquoi.
-> L'installation du socle est décrite dans [installation.md](installation.md) ;
-> l'architecture cible dans [../../architecture/jarvis.md](../../architecture/jarvis.md) ;
-> la posture de sécurité dans [../../architecture/securite.md](../../architecture/securite.md).
+> qui tournent dessus, où vit chaque chose et pourquoi : [installation](installation.md), [architecture](../../architecture/jarvis.md), [securite](../../architecture/securite.md).
 > Dernière mise à jour : 10 juillet 2026
 > Statut : **Phase 0 terminée** 🎉 — boucle vocale complète validée
 > (« Hey Jarvis » → Whisper → Qwen3 → Piper → enceinte), 100 % local
@@ -31,12 +28,11 @@ n'est installé directement sur l'hôte à part le driver GPU, Docker,
 `alsa-utils` et **une exception documentée** (wyoming-satellite, §2.4).
 Le détail des emplacements disque est en §4.
 
-**Les 5 conteneurs sont gérés par docker compose** : le fichier
-[docker-compose.yml](../../deploiement/jarvis-central/docker-compose.yml)
-versionné dans [deploiement/jarvis-central/](../../deploiement/jarvis-central/)
-est la source de vérité ; il est copié vers `/srv/jarvis/` par
-[installer.sh](../../deploiement/jarvis-central/installer.sh). Les commandes
-`docker run` détaillées plus bas sont leurs équivalents unitaires, gardées
+**Les 5 conteneurs sont gérés par docker compose** : 
+-  [docker-compose.yml](../../deploiement/jarvis-central/docker-compose.yml) versionné dans [deploiement/jarvis-central/](../../deploiement/jarvis-central/)
+est la source de vérité 
+-  il est copié vers `/srv/jarvis/` par [installer.sh](../../deploiement/jarvis-central/installer.sh). 
+-  Les commandes `docker run` détaillées plus bas sont leurs équivalents unitaires, gardées
 pour expliquer chaque option.
 
 ```bash

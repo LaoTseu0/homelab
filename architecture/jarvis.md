@@ -1,10 +1,6 @@
 # Projet Jarvis Maison — Architecture & Feuille de route
 
-> **Rôle de ce document** : base de connaissances de référence pour l'assistant
-> vocal + agentique domestique auto-hébergé (« Jarvis »). Contexte projet pour
-> agents/Claude, pensé pour vivre dans git (à côté de `archi-maison.git` /
-> `homelab.git` / `memoire-agent.git` sur le NAS).
->
+> **Rôle de ce document** : base de connaissances de référence du projet d'assistant agentique.
 > **Dernière mise à jour** : 18 juillet 2026 — **v3**
 > **Statut global** : **Phase 0 terminée** — boucle vocale complète validée sur
 > `jarvis-central` (voir [../serveurs/jarvis-central/etat.md](../serveurs/jarvis-central/etat.md)).
@@ -15,12 +11,11 @@
 
 ## 1. Objectif
 
-Assistant personnel de type « Jarvis », **100 % local** (aucun audio ne quitte la
-maison), vocal et multi-pièces, avec **deux missions** :
+Assistant personnel 100% local.
 
 1. **Voix + domotique** : piloter la maison, répondre aux questions courantes.
-2. **Assistant de tâches informatiques** : aide au dev (ex. Three.js), actions sur
-   le homelab, orchestration de fichiers/scripts.
+2. **Assistant de tâches informatiques** : aide au dev, actions sur
+   le homelab, orchestration de workflow.
 
 Pas de LLM cloud au démarrage. Option gardée en *fallback* pour les tâches lourdes.
 
@@ -33,10 +28,8 @@ Pas de LLM cloud au démarrage. Option gardée en *fallback* pour les tâches lo
 2. **DIY & communauté** : stack éprouvée Home Assistant / maker (Wyoming, Whisper,
    Piper, Ollama, ESPHome) + écosystème agent 2026 (Hermes/Pi, OKF).
 3. **Tout sur le vieux PC gamer d'abord**, puis **export** vers matériel dédié.
-4. **Scale vertical** : priorité à la puissance du « cerveau » (GPU/VRAM) avant la
-   multiplication des pièces.
-5. **Markdown + git partout** : mémoire, config, veille — versionnées, portables.
-6. **Cloisonnement & sécurité** : conteneurs, moindre privilège, rien exposé au web.
+4. **Mémoire versionnée** : Markdown, git : mémoire, config, veille — versionnées, portables.
+5. **Cloisonnement & sécurité** : conteneurs, moindre privilège, rien exposé au web.
 
 ---
 

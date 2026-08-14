@@ -7,12 +7,12 @@
 
 ## Les machines
 
-| Machine | Matériel | Rôle |
-|---|---|---|
-| `jarvis-central` | PC fixe — RTX 2060 6 Go, 32 Go RAM, Ryzen 5 | Pipeline vocal Jarvis (HA + Wyoming + Ollama), « front door » 24/7 |
-| `jarvis-core` | Tour — RTX 4090 24 Go, 64 Go RAM | Moteur d'inférence LLM (en préparation — voir [architecture/inference.md](architecture/inference.md)) |
-| `nas` | Raspberry Pi 4 — 8 Go | Serveur git (doc + mémoire agents) + partage familial SMB |
-| `pc-admin` | PC portable Asus ROG (PC perso) | Administration du homelab en SSH |
+| Machine          | Matériel                                        | Rôle                                                                                                  |
+| ---------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `jarvis-central` | PC fixe — RTX 2060 6 Go, 32 Go RAM, Ryzen 5     | Pipeline vocal Jarvis (HA + Wyoming + Ollama), « front door » 24/7                                    |
+| `jarvis-core`    | Tour — RTX 4090 24 Go, 64 Go RAM, Ryzen 9 7900x | Moteur d'inférence LLM (en préparation — voir [architecture/inference.md](architecture/inference.md)) |
+| `nas`            | Raspberry Pi 4 — 8 Go                           | Serveur git (doc + mémoire agents) + partage familial SMB                                             |
+| `pc-admin`       | PC portable Asus ROG (PC perso)                 | Administration du homelab en SSH                                                                      |
 
 Adresses IP et matrice des services : [architecture/reseau.md](architecture/reseau.md)
 (référence unique — on ne duplique pas les IP au fil des documents).

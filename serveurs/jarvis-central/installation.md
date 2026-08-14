@@ -23,10 +23,9 @@ administré en SSH depuis `pc-admin`, comme le NAS.
 | GPU | NVIDIA RTX 2060 6 Go — visible depuis l'hôte **et** depuis les conteneurs |
 
 **Choix d'architecture** (répond à la question ouverte n°2 du doc Jarvis) :
-Ubuntu Server + **Docker**, plutôt que Proxmox/HAOS en VM. On perd les add-ons
-clé-en-main de Home Assistant OS, mais chaque brique (HA, Ollama, Whisper,
-Piper…) devient un simple conteneur — plus aligné avec la démarche
-« une brique testable à la fois ».
+-  Ubuntu Server + **Docker**, plutôt que Proxmox/HAOS en VM. 
+-  On perd les add-ons clé-en-main de Home Assistant OS, mais chaque brique (HA, Ollama, Whisper,Piper…) devient un simple conteneur — plus aligné avec la démarche **modulaire** 
+  « une brique testable à la fois ».
 
 ---
 
