@@ -173,7 +173,7 @@ Sur le NAS, `agent0` est le compte Git de la tour. Le rôle Ansible le crée
 dans le groupe `agents` et lui donne le shell `git-shell`. Le compte
 `studio` continue de servir à l’administration de la tour.
 
-Depuis **WSL**, dans `ansible-apprentissage` avec ton environnement Ansible
+Depuis **WSL**, dans `ansible` avec ton environnement Ansible
 activé, récupère la clé publique que la tour utilise pour le NAS. La clé
 privée correspondante reste sur la tour.
 

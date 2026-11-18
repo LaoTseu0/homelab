@@ -18,7 +18,7 @@ ni Ollama, ni les services Wyoming.
 
 ## Déployer le socle avec Ansible
 
-Le [playbook de la tour](../../ansible-apprentissage/configurer-lab-studio.yml)
+Le [playbook de la tour](../../ansible/configurer-lab-studio.yml)
 cible `lab-studio` via SSH avec le compte `studio`. Il prépare Docker et NVIDIA,
 contrôle les montages des conteneurs existants, puis applique le Compose sous
 `/srv/jarvis`. Le volume externe `ollama` et les chemins de données sous
@@ -26,7 +26,7 @@ contrôle les montages des conteneurs existants, puis applique le Compose sous
 actuelle. Sur une tour neuve, restaurer les données à ces emplacements avant
 de lancer les services si l’objectif est de retrouver l’état précédent.
 
-Depuis WSL, dans `ansible-apprentissage` avec l’environnement Ansible activé,
+Depuis WSL, dans `ansible` avec l’environnement Ansible activé,
 procède d’abord à une simulation sur la tour existante.
 
 ```bash
@@ -48,7 +48,7 @@ Le mot de passe demandé est celui de `sudo` pour `studio` sur la tour. Le
 playbook installe l’unité Wyoming et la maintient arrêtée pendant que le
 satellite est débranché. Après l’avoir rebranché, passe
 `lab_studio_satellite_active` à `true` dans les
-[variables de la tour](../../ansible-apprentissage/host_vars/lab-studio.yml) et
+[variables de la tour](../../ansible/host_vars/lab-studio.yml) et
 rejoue le playbook pour l’activer au démarrage et la lancer.
 
 Le registre privé peut fournir chaque image publiée. Dans les mêmes variables,
@@ -59,11 +59,11 @@ certificat public et utilise le compte de lecture déclaré sur le NAS.
 
 ### Publier les images de la reprise initiale
 
-Le [script de publication](../../ansible-apprentissage/publier-images-lab-studio.sh)
+Le [script de publication](../../ansible/publier-images-lab-studio.sh)
 reprend les images exactes d’Ollama, Home Assistant, Whisper, Piper et
 openWakeWord. Les dépôts d’images de cette tour utilisent le préfixe `studio/`,
 par exemple `studio/piper`. Lance le script depuis WSL, dans
-`ansible-apprentissage`.
+`ansible`.
 
 ```bash
 bash publier-images-lab-studio.sh
@@ -111,7 +111,7 @@ de l’installateur complet.
    sous `studio/` dans le registry du NAS. Renseigner les trois références
    du port `5001` par digest dans `lab_studio_monitoring_images`.
 2. Préparer le compte Grafana `admin`. Dans WSL, depuis
-   `ansible-apprentissage`, créer son fichier d’environnement chiffré. Si
+   `ansible`, créer son fichier d’environnement chiffré. Si
    le fichier existe déjà, le conserver pour retrouver le même mot de passe.
 
 ```bash

@@ -180,7 +180,7 @@ comptes `antho` et `oce` sur leurs partages. La configuration active est
 `/etc/haproxy/haproxy.cfg` sur le Pi 4. `~/haproxy-samba.cfg` a servi à la
 mise en service manuelle. La configuration précédente est sauvegardée dans
 `/etc/haproxy/haproxy.cfg.orig`. Pour le tutoriel Ansible, la source sera versionnée
-dans `ansible-apprentissage/files/haproxy-samba.cfg` puis déployée avec une
+dans `ansible/files/haproxy-samba.cfg` puis déployée avec une
 validation `haproxy -c` avant remplacement du fichier actif.
 [Adresses d'accès depuis les téléphones](architecture/reseau.md)
 
