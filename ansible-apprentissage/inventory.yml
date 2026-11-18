@@ -1,0 +1,12 @@
+all:                      # Groupe intégré qui englobe tous les hôtes de l’inventaire.
+  hosts:                  # Déclare les machines membres de ce groupe.
+    nas:                  # Nom de l’hôte dans Ansible, utilisé par « hosts: nas » et host_vars/nas.yml.
+      ansible_host: pinas # Destination SSH, ici l’alias Host pinas du ~/.ssh/config dans Ubuntu/WSL.
+      ansible_user: pinas # Compte Linux utilisé pour la connexion au NAS, avant une éventuelle élévation sudo.
+    lab-1:                # Nom Ansible du Pi 4, utilisé par « hosts: lab-1 » et host_vars/lab-1.yml.
+      ansible_host: lab-1 # Destination SSH, ici l’alias Host lab-1 qui définit l’adresse et la clé dans Ubuntu/WSL.
+      ansible_user: lab-1 # Compte Linux utilisé sur le Pi 4, dont le hostname système est lab-rpi4-1.
+    lab-studio: # Nom utilisé pour cibler cette tour dans Ansible.
+      ansible_host: 192.168.50.252 # Adresse IPv4 actuelle de la tour sur le réseau Homelab.
+      ansible_user: studio # Compte Linux utilisé par SSH sur la tour.
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519_jarvis_central # Chemin de la clé privée sur le control node WSL.

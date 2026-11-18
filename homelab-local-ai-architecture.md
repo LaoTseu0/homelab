@@ -19,7 +19,7 @@ L’objectif n’est plus le gaming. La tour équipée d’une RTX 4090 devient 
 
 | Machine | Matériel | Rôle actuel ou prévu |
 |---|---|---|
-| `jarvis-central` | Ryzen 5, 32 Go de RAM, RTX 2060 6 Go | Pipeline vocal Jarvis, Home Assistant, Wyoming, Ollama léger et point d’entrée disponible 24 h/24 |
+| `lab-studio` | Ryzen 5, 32 Go de RAM, RTX 2060 6 Go | Pipeline vocal Jarvis, Home Assistant, Wyoming, Ollama léger et point d’entrée disponible 24 h/24 |
 | `jarvis-core` | Ryzen 9 7900X, 64 Go de RAM, RTX 4090 24 Go, SSD NVMe 4 To | Moteur principal d’inférence LLM et serveur de calcul IA |
 | `nas` | Raspberry Pi 4, 8 Go | Serveur Git, documentation, mémoire des agents et partage familial SMB |
 | `pc-admin` | Portable Asus ROG | Administration du homelab |
@@ -136,7 +136,7 @@ Microphones, interfaces et Home Assistant
                     |
                     v
           +-------------------+
-          |  jarvis-central   |
+          |  lab-studio   |
           |-------------------|
           | Point d’entrée    |
           | Pipeline vocal    |
@@ -169,7 +169,7 @@ Microphones, interfaces et Home Assistant
           +-------------------+
 ```
 
-### `jarvis-central`
+### `lab-studio`
 
 Cette machine doit rester le point d’entrée stable et disponible 24 h/24 :
 
@@ -219,11 +219,11 @@ Les charges actives et intensives, comme l’indexation massive ou une base vect
 
 ## 7. Répartition possible des requêtes
 
-Le routeur de `jarvis-central` pourrait classer les requêtes :
+Le routeur de `lab-studio` pourrait classer les requêtes :
 
 | Type de requête | Destination recommandée |
 |---|---|
-| Commande domotique simple | `jarvis-central` |
+| Commande domotique simple | `lab-studio` |
 | Conversation courte et peu complexe | Petit modèle sur la RTX 2060 |
 | Raisonnement complexe | Modèle principal sur la RTX 4090 |
 | Question nécessitant le RAG | `jarvis-core`, puis accès aux documents du NAS |
@@ -391,7 +391,7 @@ Pour un futur nœud GPU :
 
 - Installer le moteur d’inférence principal.
 - Exposer une API locale compatible OpenAI.
-- Faire router les requêtes lourdes de `jarvis-central` vers `jarvis-core`.
+- Faire router les requêtes lourdes de `lab-studio` vers `jarvis-core`.
 - Réserver la RTX 4090 au calcul en utilisant la sortie vidéo de la carte mère si un écran est nécessaire.
 - Mettre en place les workers CPU pour les outils, le RAG et le traitement documentaire.
 
@@ -438,7 +438,7 @@ La machine actuelle est déjà puissante. Avant d’acheter un deuxième GPU ou 
 
 1. Quel moteur d’inférence utiliser sur `jarvis-core` : Ollama, llama.cpp, vLLM, SGLang ou combinaison de plusieurs moteurs ?
 2. Quels modèles doivent rester chargés en permanence ?
-3. Quel modèle léger doit fonctionner sur `jarvis-central` ?
+3. Quel modèle léger doit fonctionner sur `lab-studio` ?
 4. Comment router automatiquement les requêtes entre les deux machines ?
 5. Où placer la base vectorielle et comment répliquer ses données sur le NAS ?
 6. Comment isoler les outils exécutés par les agents ?
@@ -457,7 +457,7 @@ Si `jarvis-core` sert uniquement à lancer Ollama avec un modèle entièrement c
 
 La meilleure évolution immédiate n’est probablement pas l’achat d’une deuxième carte graphique. Elle consiste à exploiter la séparation déjà présente :
 
-- `jarvis-central` comme interface stable et disponible ;
+- `lab-studio` comme interface stable et disponible ;
 - `jarvis-core` comme serveur de calcul IA et d’agents ;
 - le NAS comme couche de persistance et de sauvegarde.
 

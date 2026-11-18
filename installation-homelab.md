@@ -16,14 +16,14 @@
   déploiement Compose : elles créeraient des conteneurs et ports en conflit.
 - Les adresses actuellement documentées sont :
   - NAS : `192.168.1.80` ;
-  - `jarvis-central` : `192.168.1.57` ;
+  - `lab-studio` : `192.168.50.252` ;
   - `jarvis-core` : `192.168.1.187`.
 - Ces IP ne sont pas garanties tant que les réservations DHCP ne sont pas
   configurées sur la box.
 - Les secrets, mots de passe et clés privées ne doivent jamais être ajoutés à
   ce dépôt.
 
-## 1. `jarvis-central` — de l'OS au test GPU dans un conteneur
+## 1. `lab-studio` — de l'OS au test GPU dans un conteneur
 
 Cette section produit le socle suivant : Ubuntu Server, SSH, pilote NVIDIA,
 Docker, NVIDIA Container Toolkit, puis un `nvidia-smi` réussi depuis Docker.
@@ -34,15 +34,15 @@ Actions manuelles, avec écran et clavier temporairement branchés :
 
 1. Créer une clé USB Ubuntu Server 26.04 LTS avec Rufus.
 2. Installer Ubuntu Server, pas la variante `minimized`.
-3. Définir le hostname `jarvis-central`.
-4. Créer l'utilisateur `jarvis`.
+3. Définir le hostname `lab-studio`.
+4. Créer l'utilisateur `studio`.
 5. Cocher `Install OpenSSH server`.
 6. Redémarrer puis vérifier l'accès SSH avant de retirer écran et clavier.
 7. Dans le BIOS, régler si possible le redémarrage après coupure secteur sur
    `Power On`.
 
-Toutes les commandes suivantes sont exécutées sur `jarvis-central` avec le
-compte `jarvis`.
+Toutes les commandes suivantes sont exécutées sur `lab-studio` avec le
+compte `studio`.
 
 ### 1.2 Mettre le système à jour
 
@@ -71,7 +71,7 @@ Résultat attendu : la GeForce RTX 2060 et ses 6144 MiB de VRAM apparaissent.
 
 ```bash
 curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker jarvis
+sudo usermod -aG docker studio
 ```
 
 Fermer complètement la session afin de charger le nouveau groupe :
@@ -197,21 +197,11 @@ sudo -u pinas git -C /srv/git/homelab.git symbolic-ref HEAD
 sudo git config --system --get-all safe.directory
 ```
 
-### 2.5 Créer le compte Git dédié à `jarvis-central`
+### 2.5 Créer le compte Git dédié à `lab-studio`
 
-Le compte `jarvisc` est mentionné dans l'état existant de `jarvis-central`,
-mais sa création n'était pas documentée. Les commandes suivantes définissent
-le modèle minimal cohérent : compte sans sudo, membre du groupe `agents`, accès
-Git par SSH.
-
-```bash
-sudo adduser --disabled-password --gecos "" jarvisc
-sudo usermod -aG agents jarvisc
-id jarvisc
-```
-
-La clé publique de `jarvis-central` sera installée en section 4.2. Tant que
-cette étape n'est pas faite, ce compte ne peut pas se connecter.
+Le compte `agent0` est réservé à l’accès Git de la tour. Ansible le crée avec
+le groupe `agents` et le shell `git-shell`, à partir de la clé publique
+préparée en section 4.
 
 ### 2.6 Créer le compte et le partage Samba d'Océane
 
@@ -270,7 +260,7 @@ Ne pas relancer une commande si le fichier privé correspondant existe déjà.
 
 ```powershell
 ssh-keygen -t ed25519 -C "pc-admin" -f "$env:USERPROFILE\.ssh\id_ed25519_nas"
-ssh-keygen -t ed25519 -C "pc-admin" -f "$env:USERPROFILE\.ssh\id_ed25519_jarvis-central"
+ssh-keygen -t ed25519 -C "pc-admin" -f "$env:USERPROFILE\.ssh\id_ed25519_jcentral"
 ```
 
 La clé de `jarvis-core` sera créée lorsque son compte administrateur aura été
@@ -285,7 +275,7 @@ ssh-keygen -t ed25519 -C "pc-admin" -f "$env:USERPROFILE\.ssh\id_ed25519_jarvis-
 ```powershell
 Get-Content "$env:USERPROFILE\.ssh\id_ed25519_nas.pub" | ssh pinas@192.168.1.80 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
-Get-Content "$env:USERPROFILE\.ssh\id_ed25519_jarvis-central.pub" | ssh jarvis@192.168.1.57 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+Get-Content "$env:USERPROFILE\.ssh\id_ed25519_jcentral.pub" | ssh studio@192.168.50.252 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
 
 ### 3.4 Déclarer les alias
@@ -305,10 +295,10 @@ Host nas
     IdentityFile C:\Users\antho\.ssh\id_ed25519_nas
     IdentitiesOnly yes
 
-Host jarvis-central
-    HostName 192.168.1.57
-    User jarvis
-    IdentityFile C:\Users\antho\.ssh\id_ed25519_jarvis-central
+Host lab-studio
+    HostName 192.168.50.252
+    User studio
+    IdentityFile C:\Users\antho\.ssh\id_ed25519_jcentral
     IdentitiesOnly yes
 
 Host jarvis-core
@@ -322,7 +312,7 @@ Host jarvis-core
 
 ```powershell
 ssh nas
-ssh jarvis-central
+ssh lab-studio
 ```
 
 `ssh jarvis-core` ne peut être validé qu'après installation de son OS et
@@ -352,34 +342,26 @@ git -C /srv/git/homelab.git log --oneline -5
 git -C /srv/git/homelab.git symbolic-ref HEAD
 ```
 
-## 4. `jarvis-central` — accès Git au NAS
+## 4. `lab-studio` — accès Git au NAS
 
 ### 4.1 Générer une clé dédiée au NAS
 
-Sur `jarvis-central`, avec le compte `jarvis` :
+Sur `lab-studio`, avec le compte `studio`, génère la clé seulement si
+elle n’existe pas encore :
 
 ```bash
-ssh-keygen -t ed25519 -C "jarvis-central -> nas" -f ~/.ssh/id_ed25519_nas
+ssh-keygen -t ed25519 -C "lab-studio -> nas" -f ~/.ssh/id_ed25519_nas
 cat ~/.ssh/id_ed25519_nas.pub
 ```
 
-### 4.2 Autoriser la clé pour `jarvisc`
+### 4.2 Autoriser la clé pour `agent0`
 
-Copier la ligne affichée par la commande précédente. Sur le NAS, connecté en
-`pinas` :
+Applique le rôle NAS via Ansible avec la clé publique de la tour.
+[Procédure agent0](serveurs/lab-studio/renommer.md#créer-laccès-git-de-lab-studio-avec-agent0)
 
-```bash
-sudo install -d -o jarvisc -g jarvisc -m 0700 /home/jarvisc/.ssh
-sudoedit /home/jarvisc/.ssh/authorized_keys
-sudo chown jarvisc:jarvisc /home/jarvisc/.ssh/authorized_keys
-sudo chmod 0600 /home/jarvisc/.ssh/authorized_keys
-```
+### 4.3 Créer l'alias NAS sur `lab-studio`
 
-Coller uniquement la clé publique dans `authorized_keys`, jamais la clé privée.
-
-### 4.3 Créer l'alias NAS sur `jarvis-central`
-
-Sur `jarvis-central` :
+Sur `lab-studio` :
 
 ```bash
 nano ~/.ssh/config
@@ -389,9 +371,9 @@ Ajouter :
 
 ```sshconfig
 Host nas
-    HostName 192.168.1.80
-    User jarvisc
-    IdentityFile /home/jarvis/.ssh/id_ed25519_nas
+    HostName 192.168.50.198
+    User agent0
+    IdentityFile /home/studio/.ssh/id_ed25519_nas
     IdentitiesOnly yes
 ```
 
@@ -399,22 +381,22 @@ Puis appliquer les permissions et tester :
 
 ```bash
 chmod 0600 ~/.ssh/config
-ssh nas
+git ls-remote nas:/srv/git/homelab.git HEAD
 ```
 
 Le premier accès demande de confirmer l'empreinte du NAS. La vérifier avant de
 répondre `yes`.
 
-## 5. `jarvis-central` — déployer Jarvis
+## 5. `lab-studio` — déployer Jarvis
 
 La source de vérité est le dossier
-[`deploiement/jarvis-central/`](deploiement/jarvis-central/). L'installeur crée
+[`deploiement/lab-studio/`](deploiement/lab-studio/). L'installeur crée
 les répertoires persistants, copie le Compose, lance les cinq conteneurs,
 télécharge les modèles et installe l'unité systemd du satellite.
 
 ### 5.1 Cloner le dépôt depuis le NAS
 
-Sur `jarvis-central` :
+Sur `lab-studio` :
 
 ```bash
 git clone nas:/srv/git/homelab.git ~/homelab
@@ -437,9 +419,9 @@ La carte doit apparaître avec le nom ALSA `Array`.
 ### 5.3 Exécuter l'installeur versionné
 
 ```bash
-cd ~/homelab/deploiement/jarvis-central
+cd ~/homelab/deploiement/lab-studio
 chmod +x installer.sh
-./installer.sh
+bash installer.sh
 ```
 
 L'installeur exécute notamment les opérations suivantes :
@@ -447,13 +429,13 @@ L'installeur exécute notamment les opérations suivantes :
 ```bash
 sudo mkdir -p /srv/jarvis /srv/homeassistant /srv/wyoming/whisper /srv/wyoming/piper
 docker volume inspect ollama >/dev/null 2>&1 || docker volume create ollama
-sudo cp /home/jarvis/homelab/deploiement/jarvis-central/docker-compose.yml /srv/jarvis/docker-compose.yml
+sudo cp /home/studio/homelab/deploiement/lab-studio/docker-compose.yml /srv/jarvis/docker-compose.yml
 docker compose -f /srv/jarvis/docker-compose.yml up -d
 docker exec ollama ollama pull qwen3:4b-instruct-2507-q4_K_M
 docker exec ollama ollama pull nomic-embed-text
-git clone https://github.com/rhasspy/wyoming-satellite.git /home/jarvis/wyoming-satellite
-(cd /home/jarvis/wyoming-satellite && script/setup)
-sudo cp /home/jarvis/homelab/deploiement/jarvis-central/wyoming-satellite.service /etc/systemd/system/
+git clone https://github.com/rhasspy/wyoming-satellite.git /home/studio/wyoming-satellite
+(cd /home/studio/wyoming-satellite && script/setup)
+sudo cp /home/studio/homelab/deploiement/lab-studio/wyoming-satellite.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now wyoming-satellite
 ```
@@ -511,7 +493,7 @@ runbook reproduit l'existant ; il ne prétend pas que ces ports sont restreints
 
 Cette partie se fait dans l'interface web, pas en ligne de commande.
 
-Ouvrir : `http://192.168.1.57:8123`.
+Ouvrir : `http://192.168.50.252:8123`.
 
 ### 6.1 Onboarding
 
@@ -650,18 +632,18 @@ sudo -u pinas git -C /srv/git/homelab.git push github --tags
 ```
 
 Le hook s'exécute avec l'identité Unix qui pousse. Comme la clé GitHub est
-privée à `pinas`, les pushes effectués sous `jarvisc` ou un autre compte agent
+privée à `pinas`, les pushes effectués sous `agent0` ou un autre compte agent
 mettront à jour le NAS mais ne pourront pas alimenter ce miroir directement.
 
-## 8. Exploitation courante de `jarvis-central`
+## 8. Exploitation courante de `lab-studio`
 
 ### 8.1 Mettre à jour la configuration versionnée
 
 ```bash
 cd ~/homelab
 git pull
-cd deploiement/jarvis-central
-./installer.sh
+cd deploiement/lab-studio
+bash installer.sh
 ```
 
 ### 8.2 Gérer les conteneurs
@@ -707,9 +689,9 @@ runbook reproductible.
 
 ## 10. Sources détaillées conservées
 
-- [`serveurs/jarvis-central/installation.md`](serveurs/jarvis-central/installation.md)
-- [`serveurs/jarvis-central/etat.md`](serveurs/jarvis-central/etat.md)
-- [`deploiement/jarvis-central/`](deploiement/jarvis-central/)
+- [`serveurs/lab-studio/installation.md`](serveurs/lab-studio/installation.md)
+- [`serveurs/lab-studio/etat.md`](serveurs/lab-studio/etat.md)
+- [`deploiement/lab-studio/`](deploiement/lab-studio/)
 - [`serveurs/nas/installation.md`](serveurs/nas/installation.md)
 - [`serveurs/pc-admin/installation.md`](serveurs/pc-admin/installation.md)
 - [`reference-homelab.md`](reference-homelab.md)

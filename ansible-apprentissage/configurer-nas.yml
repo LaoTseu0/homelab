@@ -1,0 +1,10 @@
+- name: Configurer le NAS # Description du play.
+  hosts: nas # Machine sélectionnée dans l’inventaire.
+  gather_facts: false # Les tâches utilisent nos variables explicites.
+  become: true # Autorise les opérations système via sudo.
+
+  roles:
+    - nas # Prépare notamment le montage du NVMe.
+    - docker # Prépare le dépôt de paquets Docker.
+    - role: registry # Déploie le registry avec Compose.
+      tags: [registry] # Permet de mettre à jour le registry seul sur un NAS déjà configuré.

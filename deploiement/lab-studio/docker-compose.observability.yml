@@ -1,0 +1,110 @@
+# Jarvis — observabilité optionnelle
+# Ce fichier est combiné avec docker-compose.yml par installer.sh.
+
+services:
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - node-exporter
+    healthcheck:
+      test: ["CMD", "/bin/promtool", "query", "instant", "http://127.0.0.1:9090", "up"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  grafana:
+    image: grafana/grafana:13.1.4
+    container_name: grafana
+    restart: unless-stopped
+    env_file:
+      - /srv/jarvis/secrets/grafana.env
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro,rslave
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  jarvis-exporter:
+    profiles: [jarvis-exporter]
+    build:
+      context: ./observability/jarvis-exporter
+    image: jarvis-exporter:local
+    container_name: jarvis-exporter
+    restart: unless-stopped
+    env_file:
+      - /srv/jarvis/secrets/jarvis-exporter.env
+    environment:
+      JARVIS_EXPORTER_CONFIG: /etc/jarvis-exporter/config.json
+    ports:
+      - "127.0.0.1:9102:9102"
+    volumes:
+      - ./observability/jarvis-exporter/config.json:/etc/jarvis-exporter/config.json:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      - ollama
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -30,5 +30,5 @@ section jarvis-core) :
 2. Vérifier les prérequis matériels (profil EXPO, alimentation, slots PCIe).
 3. Installer le socle et le documenter dans `installation.md` (à créer ici,
    sur le modèle de
-   [../jarvis-central/installation.md](../jarvis-central/installation.md)).
+   [../lab-studio/installation.md](../lab-studio/installation.md)).
 4. Tenir ce fichier à jour au premier service déployé.

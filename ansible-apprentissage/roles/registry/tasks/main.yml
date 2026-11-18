@@ -1,0 +1,242 @@
+- name: Préparer les dossiers du registry
+  ansible.builtin.file:
+    path: "{{ item }}" # Dossier traité pendant cette itération.
+    state: directory # Le dossier doit exister.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Permissions des dossiers.
+  loop:
+    - /srv/registry # Projet Compose déployé sur le NAS.
+    - /srv/appdata/registry # Stockage persistant des images.
+
+- name: Installer les outils d’authentification et de chiffrement
+  ansible.builtin.apt:
+    name:
+      - python3-passlib # Bibliothèque utilisée par le module htpasswd sur le NAS.
+      - python3-bcrypt # Implémentation du hachage bcrypt.
+      - openssl # Outil de génération de la clé et du certificat TLS.
+    state: present # Les outils doivent être installés.
+
+- name: Préparer le dossier privé d’authentification du registry
+  ansible.builtin.file:
+    path: /srv/registry/auth # Dossier conservé sur le NVMe.
+    state: directory # Le dossier doit exister.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0700' # Accès réservé à root.
+
+- name: Préparer le compte de publication du registry
+  community.general.htpasswd:
+    path: /srv/registry/auth/htpasswd # Fichier lu par le registry pour authentifier ses clients.
+    name: "{{ registry_admin_user }}" # Identifiant déclaré dans Vault.
+    password: "{{ registry_admin_password }}" # Mot de passe déchiffré par Ansible pour cette tâche.
+    hash_scheme: bcrypt # Format exigé par l’authentification native de Distribution.
+    owner: root # Compte propriétaire du fichier.
+    group: root # Groupe propriétaire.
+    mode: '0600' # Lecture et écriture réservées à root.
+    state: present # Garantit la présence de cette identité.
+  no_log: true # Masque les paramètres et le résultat sensibles dans la sortie Ansible.
+
+- name: Préparer l’accès de lecture du registry
+  when: registry_reader_password is defined # Active ce point d’accès une fois son mot de passe ajouté à Vault.
+  block:
+    - name: Préparer le dossier des comptes de lecture
+      ansible.builtin.file:
+        path: /srv/registry/reader-auth # Sépare le compte de lecture du compte de publication.
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Préparer le compte de téléchargement de la tour
+      community.general.htpasswd:
+        path: /srv/registry/reader-auth/htpasswd
+        name: "{{ registry_reader_user }}"
+        password: "{{ registry_reader_password }}" # Valeur chiffrée dans Vault.
+        hash_scheme: bcrypt
+        owner: root
+        group: root
+        mode: '0600'
+        state: present
+      no_log: true
+
+    - name: Retirer l’ancien compte de téléchargement après validation de la bascule
+      community.general.htpasswd:
+        path: /srv/registry/reader-auth/htpasswd
+        name: jarvis-central
+        owner: root
+        group: root
+        mode: '0600'
+        state: absent
+      when: registry_remove_legacy_reader | default(false) | bool
+
+    - name: Relever l’empreinte du fichier des comptes de lecture
+      ansible.builtin.stat:
+        path: /srv/registry/reader-auth/htpasswd
+        checksum_algorithm: sha256
+      register: registry_reader_auth_file
+
+- name: Préparer le dossier privé des certificats du registry
+  ansible.builtin.file:
+    path: /srv/registry/tls # Conserve la clé et le certificat sur le NVMe.
+    state: directory # Le dossier doit exister.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0700' # Accès réservé à root sur le NAS.
+
+- name: Générer la clé privée du registry
+  ansible.builtin.command:
+    argv: # Chaque élément est un argument transmis à OpenSSL.
+      - /usr/bin/openssl
+      - genpkey
+      - -algorithm
+      - RSA
+      - -pkeyopt
+      - rsa_keygen_bits:3072
+      - -out
+      - /srv/registry/tls/registry.key
+    creates: /srv/registry/tls/registry.key # Réutilise la clé lors des passages suivants.
+
+- name: Protéger la clé privée du registry
+  ansible.builtin.file:
+    path: /srv/registry/tls/registry.key # Clé lue par le processus du registry.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0600' # Accès au fichier réservé à root.
+  when: not ansible_check_mode # En simulation, la génération précédente ne crée pas le fichier.
+
+- name: Générer le certificat HTTPS du registry
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/openssl
+      - req
+      - -new
+      - -x509
+      - -days
+      - '365'
+      - -key
+      - /srv/registry/tls/registry.key
+      - -out
+      - /srv/registry/tls/registry.crt
+      - -config
+      - /dev/stdin
+    stdin: | # Configuration OpenSSL transmise en entrée standard.
+      [req]
+      prompt = no
+      distinguished_name = dn
+      x509_extensions = server
+      [dn]
+      CN = Homelab Registry
+      [server]
+      basicConstraints = critical,CA:FALSE
+      keyUsage = critical,digitalSignature,keyEncipherment
+      extendedKeyUsage = serverAuth
+      subjectAltName = IP:{{ registry_lan_ip }}
+    creates: /srv/registry/tls/registry.crt # Conserve le certificat auquel les clients font déjà confiance.
+
+- name: Vérifier l’identité et la validité du certificat HTTPS
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/openssl
+      - verify
+      - -purpose
+      - sslserver
+      - -verify_ip
+      - "{{ registry_lan_ip }}"
+      - -CAfile
+      - /srv/registry/tls/registry.crt
+      - /srv/registry/tls/registry.crt
+  changed_when: false # Le contrôle lit le certificat.
+
+- name: Rendre le certificat public accessible aux clients
+  ansible.builtin.copy:
+    src: /srv/registry/tls/registry.crt # Copie uniquement le certificat public.
+    dest: /srv/registry/registry.crt # Fichier que le compte SSH pinas peut lire.
+    remote_src: true # La copie s’effectue entre deux chemins sur le NAS.
+    owner: root
+    group: root
+    mode: '0644'
+  when: not ansible_check_mode # Le certificat est créé lors de l’application réelle.
+
+- name: Relever l’empreinte du fichier d’authentification
+  ansible.builtin.stat:
+    path: /srv/registry/auth/htpasswd # Distribution charge ce fichier au démarrage.
+    checksum_algorithm: sha256 # L’empreinte change lorsqu’un compte ou un mot de passe change.
+  register: registry_auth_file # Transmet l’empreinte au template pour provoquer une recréation si nécessaire.
+
+- name: Déployer la définition Compose du registry
+  ansible.builtin.template:
+    src: compose.yml.j2 # Modèle situé dans templates/ du rôle.
+    dest: /srv/registry/compose.yml # Définition utilisée sur le NAS.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Fichier lisible.
+    validate: /usr/bin/docker compose -f %s config --quiet # Vérifie la définition avant son installation.
+
+- name: Appliquer le projet Compose du registry
+  community.docker.docker_compose_v2:
+    project_src: /srv/registry # Dossier contenant compose.yml.
+    project_name: registry # Nom stable du projet et de ses ressources Docker.
+    state: present # Crée ou actualise les conteneurs nécessaires.
+    pull: missing # Télécharge l’image fixée si elle manque localement.
+    build: never # Utilise l’image publiée.
+    remove_orphans: true # Retire le service de lecture du projet si son accès est désactivé.
+    wait: true # Attend le démarrage des services.
+    wait_timeout: 60 # Délai maximal d’attente en secondes.
+
+- name: Vérifier que le registry demande une authentification
+  ansible.builtin.uri:
+    url: "https://{{ registry_lan_ip }}:5000/v2/" # API HTTPS appelée depuis le NAS.
+    ca_path: /srv/registry/tls/registry.crt # Fait confiance au certificat local pour cette requête.
+    status_code: 401 # Une requête sans compte doit être refusée.
+    use_proxy: false # Connexion directe au service local.
+  register: registry_api # Conserve le résultat de la requête.
+  until: registry_api.status == 401 # Réessaie jusqu’à obtenir la réponse attendue.
+  retries: 10 # Nombre de tentatives supplémentaires autorisées.
+  delay: 3 # Pause entre les tentatives.
+
+- name: Vérifier que le compte de publication peut s’authentifier
+  ansible.builtin.uri:
+    url: "https://{{ registry_lan_ip }}:5000/v2/" # Même API, avec les identifiants cette fois.
+    ca_path: /srv/registry/tls/registry.crt # Vérifie le certificat et l’adresse du serveur.
+    url_username: "{{ registry_admin_user }}" # Identifiant fourni par Vault.
+    url_password: "{{ registry_admin_password }}" # Mot de passe fourni par Vault.
+    force_basic_auth: true # Envoie les identifiants sur la connexion TLS.
+    follow_redirects: none # Garde la requête sur cette adresse.
+    status_code: 200 # Une requête authentifiée doit réussir.
+    use_proxy: false # Connexion directe au service local.
+  no_log: true # Masque les identifiants dans les sorties Ansible.
+
+- name: Attendre la réponse HTTPS du registry de lecture
+  ansible.builtin.uri:
+    url: "https://{{ registry_lan_ip }}:5001/v2/"
+    ca_path: /srv/registry/tls/registry.crt
+    status_code: 401 # Vérifie que le port répond et que l’authentification est exigée.
+    use_proxy: false
+    use_netrc: false # Effectue ce test sans identifiants locaux.
+  register: registry_reader_ready
+  until: registry_reader_ready.status == 401
+  retries: 10
+  delay: 3
+  when: registry_reader_password is defined
+
+- name: Vérifier les droits du compte de téléchargement
+  ansible.builtin.uri:
+    url: "https://{{ registry_lan_ip }}:5001{{ item.path }}"
+    ca_path: /srv/registry/tls/registry.crt
+    url_username: "{{ registry_reader_user }}"
+    url_password: "{{ registry_reader_password }}"
+    force_basic_auth: true
+    follow_redirects: none
+    method: "{{ item.method }}"
+    status_code: "{{ item.status }}"
+    use_proxy: false
+  loop:
+    - { method: GET, path: '/v2/', status: 200 } # Vérifie que le compte peut accéder à l’API.
+    - { method: POST, path: '/v2/test/verification-lecture/blobs/uploads/', status: 405 } # Vérifie le refus d’un début de publication.
+  register: registry_reader_probe
+  until: registry_reader_probe.status == item.status # Attend que le service réponde après sa création.
+  retries: 5
+  delay: 2
+  no_log: true
+  when: registry_reader_password is defined

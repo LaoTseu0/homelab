@@ -1,7 +1,7 @@
 # Architecture — inférence LLM à deux machines
 
 > Comment le homelab sert ses LLM : `jarvis-core` (le moteur) fournit
-> l'inférence lourde, `jarvis-central` (la front door) reste l'interface
+> l'inférence lourde, `lab-studio` (la front door) reste l'interface
 > 24/7. Distillé depuis [../exploration/inference-locale.md](../exploration/inference-locale.md)
 > au fur et à mesure des décisions.
 > Dernière mise à jour : 18 juillet 2026
@@ -12,7 +12,7 @@
 
 ## 1. L'intention
 
-Jusqu'ici, tout Jarvis vivait sur `jarvis-central` (RTX 2060 6 Go) — assez
+Jusqu'ici, tout Jarvis vivait sur `lab-studio` (RTX 2060 6 Go) — assez
 pour la voix/domotique (Qwen3 4B), trop juste pour le raisonnement, le code
 et les futurs modèles audio-natifs. L'arrivée de `jarvis-core`
 (RTX 4090 24 Go, 64 Go RAM) concrétise le « scale vertical » du principe
@@ -32,7 +32,7 @@ prend donc le rôle où elle excelle
                   │  LAN filaire
                   ▼
   ┌───────────────────────────────────────┐
-  │  jarvis-central — « front door »      │   RTX 2060 6 Go / 32 Go RAM
+  │  lab-studio — « front door »      │   RTX 2060 6 Go / 32 Go RAM
   │  allumée 24/7                         │
   │  • pipeline vocal (HA + Wyoming)      │
   │  • Ollama + Qwen3 4B (voix)           │
@@ -52,14 +52,14 @@ prend donc le rôle où elle excelle
 
 ## 3. Répartition des rôles
 
-| | `jarvis-central` | `jarvis-core` |
+| | `lab-studio` | `jarvis-core` |
 |---|---|---|
 | Disponibilité | 24/7 | à la demande (extinction/WoL envisagés) |
 | Inférence | Qwen3 4B — voix uniquement (latence < 1 s exigée) | tous les usages lourds : raisonnement, code, agentique |
 | Autres services | HA, Wyoming, orchestrateur, RAG complet | aucun — machine mono-mission |
 | Écoute réseau | voir matrice de [reseau.md](reseau.md) §4 | SSH + futur port d'API LLM (à définir) |
 
-**Le sens du flux** : `jarvis-central` est *cliente* de `jarvis-core` — pas
+**Le sens du flux** : `lab-studio` est *cliente* de `jarvis-core` — pas
 l'inverse. Le RAG, lui, n'a pas besoin de grosse VRAM (recherche vectorielle
 = CPU/RAM ; seuls l'indexation et le reranker profitent du GPU) : il reste
 entièrement sur la front door.
@@ -86,7 +86,7 @@ Trois exigences ne se satisfont pas simultanément :
                                   90 % du travail)              (réveil WoL : 30-60 s)
 ```
 
-Position actuelle (à confirmer) : le Qwen3 4B **reste sur jarvis-central
+Position actuelle (à confirmer) : le Qwen3 4B **reste sur lab-studio
 pour la voix seule** — c'est le seul usage qui exige la latence du 24/7 ;
 tout le reste part sur le modèle unique de `jarvis-core`, quitte à attendre
 son réveil.
@@ -97,7 +97,7 @@ son réveil.
 2. **Le serveur d'inférence** : llama.cpp, Ollama ou vLLM ? (l'offload MoE
    du gpt-oss 120B impose llama.cpp ; un usage multi-clients pousserait vLLM).
 3. **Le port et l'API exposés** au LAN — et leur restriction UFW à
-   `jarvis-central` seule (voir [securite.md](securite.md)).
+   `lab-studio` seule (voir [securite.md](securite.md)).
 4. **Politique d'alimentation** : 24/7, extinction manuelle, ou WoL
    déclenché par la front door ?
 5. **L'OS de jarvis-core** — même socle qu'un serveur headless

@@ -1,0 +1,6 @@
+[Unit]
+RequiresMountsFor=/srv
+AssertPathIsMountPoint=/srv
+
+[Service]
+ExecStartPre=/usr/bin/findmnt --noheadings --mountpoint /srv --source UUID={{ nas_data_uuid }}

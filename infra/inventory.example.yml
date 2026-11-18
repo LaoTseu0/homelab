@@ -1,0 +1,47 @@
+---
+# Copier vers inventory.local.yml (ignoré par Git), puis renseigner les accès.
+# Vérifier les adresses d’après architecture/reseau.md et les baux DHCP.
+all:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  children:
+    nas_servers:
+      hosts:
+        nas:
+          ansible_host: RENSEIGNER_IP_PI5
+          ansible_user: pinas
+          ansible_ssh_private_key_file: ~/.ssh/id_ed25519_pinas
+          managed_enabled: true
+          docker_enabled: true
+          nas_enabled: true
+          # Ne pas créer des dépôts vides à la place d'une restauration.
+          git_repositories: []
+          # Définir après restauration des données et contrôle des propriétaires.
+          samba_shares: []
+          samba_users: []
+    jarvis_servers:
+      hosts:
+        lab-studio:
+          ansible_host: 192.168.50.252
+          ansible_user: studio
+          ansible_ssh_private_key_file: ~/.ssh/id_ed25519_jarvis_central
+          managed_enabled: false
+          docker_enabled: true
+          jarvis_enabled: true
+          # Autoriser après audit GPU, volumes et sauvegarde Home Assistant.
+          jarvis_migration_ready: false
+          satellite_enabled: false
+          # Utiliser de préférence une image versionnée du registry.
+          jarvis_exporter_image: ""
+          jarvis_exporter_build: false
+          jarvis_models:
+            - qwen3:4b-instruct-2507-q4_K_M
+            - nomic-embed-text
+        jarvis-core:
+          ansible_host: 192.168.1.187
+          ansible_user: jcore
+          ansible_ssh_private_key_file: ~/.ssh/id_ed25519_jcore
+          managed_enabled: false
+          docker_enabled: false
+          jarvis_enabled: false
+          # Le serveur d'inférence reste à choisir : aucun service inventé ici.

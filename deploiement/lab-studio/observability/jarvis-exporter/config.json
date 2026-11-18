@@ -1,0 +1,27 @@
+{
+  "server": {
+    "listen_address": "0.0.0.0",
+    "port": 9102
+  },
+  "ollama": {
+    "enabled": true,
+    "url": "http://ollama:11434",
+    "model": "qwen3:4b-instruct-2507-q4_K_M",
+    "timeout_seconds": 30,
+    "default_num_predict": 64,
+    "max_num_predict": 256,
+    "keep_alive": "5m"
+  },
+  "home_assistant": {
+    "enabled": true,
+    "websocket_url": "ws://host.docker.internal:8123/api/websocket",
+    "poll_interval_seconds": 10,
+    "pipeline_ids": []
+  },
+  "nvidia": {
+    "enabled": true,
+    "poll_interval_seconds": 15,
+    "command_timeout_seconds": 5
+  }
+}
+

@@ -1,0 +1,65 @@
+---
+- name: Vérifier le système pris en charge par le dépôt Docker
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - ansible_facts.architecture in ['aarch64', 'x86_64']
+    fail_msg: Vérifier la distribution et utiliser Raspberry Pi OS 64 bits.
+
+- name: Lire les paquets présents pour éviter un remplacement implicite de Docker
+  ansible.builtin.package_facts:
+    manager: apt
+
+- name: Signaler les installations Docker de distribution à migrer explicitement
+  ansible.builtin.assert:
+    that:
+      - "'docker.io' not in ansible_facts.packages"
+      - "'podman-docker' not in ansible_facts.packages"
+      - "'containerd' not in ansible_facts.packages"
+    fail_msg: Docker existe via un autre paquet. Auditer avant de le remplacer.
+
+- name: Créer le dossier des clés APT
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: "'docker-ce' not in ansible_facts.packages"
+
+- name: Installer la clé du dépôt officiel Docker
+  ansible.builtin.get_url:
+    url: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+  when: "'docker-ce' not in ansible_facts.packages"
+
+- name: Déclarer le dépôt officiel Docker
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/homelab-docker.sources
+    mode: '0644'
+    content: |
+      Types: deb
+      URIs: https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}
+      Suites: {{ ansible_facts.distribution_release }}
+      Components: stable
+      Architectures: {{ {'aarch64': 'arm64', 'x86_64': 'amd64'}[ansible_facts.architecture] }}
+      Signed-By: /etc/apt/keyrings/docker.asc
+  register: docker_repository
+  when: "'docker-ce' not in ansible_facts.packages"
+
+- name: Installer Docker Engine et Compose
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+      - python3-requests
+    state: present
+    update_cache: "{{ docker_repository.changed | default(false) }}"
+
+- name: Activer Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started

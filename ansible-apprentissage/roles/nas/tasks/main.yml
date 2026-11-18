@@ -1,0 +1,171 @@
+- name: Monter le NVMe sur /srv
+  tags: [registry, git-agents] # Ces deux services utilisent le NVMe.
+  ansible.posix.mount: # Gère le montage et son entrée dans /etc/fstab.
+    src: "UUID={{ nas_data_uuid }}" # Réutilise l’UUID déclaré dans host_vars/nas.yml.
+    path: /srv # Dossier dans lequel le contenu du disque devient accessible.
+    fstype: ext4 # Type du système de fichiers existant sur le NVMe.
+    opts: defaults,nofail # Options standard et démarrage possible si le disque manque.
+    dump: "0" # Désactive le mécanisme historique de sauvegarde dump pour cette entrée.
+    passno: "2" # Autorise la vérification du système de fichiers après celle de la racine.
+    backup: true # Sauvegarde /etc/fstab si le module doit le modifier.
+    state: mounted # Demande un montage actif et une entrée persistante dans /etc/fstab.
+
+- name: Installer les services du NAS
+  ansible.builtin.apt:
+    name: # Liste des paquets qui doivent être présents.
+      - samba # Serveur de fichiers SMB.
+      - git # Commandes nécessaires pour servir les dépôts bare via SSH.
+    state: present # Installe les paquets manquants.
+    update_cache: true # Actualise la liste des paquets si nécessaire.
+    cache_valid_time: 3600 # Réutilise cette liste pendant une heure.
+
+- name: Créer le groupe d’accès aux dépôts Git
+  tags: [git-agents]
+  ansible.builtin.group: # Gère un groupe Linux sur le NAS.
+    name: agents # Nom utilisé pour accorder l’accès aux dépôts.
+    gid: 1002 # Identifiant numérique du groupe, conservé après réinstallation.
+    state: present # Demande que ce groupe existe.
+
+- name: Créer les groupes des comptes SMB
+  ansible.builtin.group:
+    name: "{{ item.name }}" # Nom du groupe pour le compte courant.
+    gid: "{{ item.gid }}" # Identifiant conservé après réinstallation.
+    state: present # Le groupe doit exister.
+  loop: "{{ nas_smb_users }}" # Exécute la tâche une fois par entrée de la liste.
+
+- name: Créer les comptes Linux des partages
+  ansible.builtin.user:
+    name: "{{ item.name }}" # Nom du compte courant.
+    uid: "{{ item.uid }}" # Identifiant numérique du compte.
+    group: "{{ item.name }}" # Groupe principal créé par la tâche précédente.
+    shell: /usr/sbin/nologin # Compte destiné au partage de fichiers, avec connexion shell désactivée.
+    create_home: false # Ce compte utilise son partage comme espace de stockage.
+    state: present # Le compte doit exister.
+  loop: "{{ nas_smb_users }}" # Applique les mêmes règles à oce puis antho.
+
+- name: Ajouter l’administrateur au groupe Git
+  ansible.builtin.user:
+    name: pinas # Compte d’administration déjà créé sur le Pi.
+    groups: agents # Groupe supplémentaire à lui attribuer.
+    append: true # Ajoute ce groupe en conservant notamment son appartenance à sudo.
+
+- name: Préparer le dossier parent des partages
+  ansible.builtin.file:
+    path: /srv/partages # Dossier situé sur le NVMe monté.
+    state: directory # Le chemin doit être un dossier.
+    owner: root # Propriétaire du dossier parent.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Root peut modifier ce dossier, les autres peuvent le parcourir.
+
+- name: Préparer les espaces personnels
+  ansible.builtin.file:
+    path: "/srv/partages/{{ item.directory }}" # Chemin du partage courant.
+    state: directory # Crée le dossier s’il manque.
+    owner: "{{ item.name }}" # Compte propriétaire de cet espace.
+    group: "{{ item.name }}" # Groupe associé au compte.
+    mode: '0700' # Lecture, écriture et traversée réservées au propriétaire.
+  loop: "{{ nas_smb_users }}" # Applique ces permissions aux deux dossiers.
+
+- name: Préparer le dossier des dépôts Git
+  tags: [git-agents]
+  ansible.builtin.file:
+    path: /srv/git # Dossier des dépôts restaurés sur le NVMe.
+    state: directory # Le chemin doit exister comme dossier.
+    owner: pinas # Compte propriétaire du dossier.
+    group: agents # Groupe commun aux comptes techniques autorisés.
+    mode: '2750' # Reprend les permissions actuelles, avec héritage du groupe.
+
+- name: Configurer le compte Git de lab-studio
+  tags: [git-agents]
+  vars:
+    agent0_public_key: "{{ lookup('ansible.builtin.file', 'agent0.pub', errors='ignore') | default('', true) }}"
+  # Lors d’un déploiement complet, la présence de la clé active ce compte.
+  when: agent0_public_key | length > 0 or 'git-agents' in ansible_run_tags
+  block:
+    - name: Vérifier la clé publique dédiée à la tour
+      ansible.builtin.assert:
+        that:
+          - agent0_public_key is match('^ssh-ed25519 [A-Za-z0-9+/]+={0,2}( [^\r\n]*)?$')
+        fail_msg: Copier la clé publique SSH Ed25519 de lab-studio dans files/agent0.pub du rôle nas.
+
+    - name: Créer le compte agent0 pour Git sur SSH
+      ansible.builtin.user:
+        name: agent0
+        group: agents # Git accède aux dépôts avec les droits de ce groupe Linux.
+        home: /home/agent0 # Contient la clé publique autorisée et la configuration Git du compte.
+        create_home: true
+        shell: /usr/bin/git-shell # Autorise les commandes serveur de Git.
+        password_lock: true # L’authentification de ce compte se fait par clé SSH.
+        state: present
+
+    - name: Déclarer les dépôts partagés pour le compte agent0
+      ansible.builtin.blockinfile:
+        path: /home/agent0/.gitconfig
+        create: true
+        owner: agent0
+        group: agents
+        mode: '0600'
+        block: |
+          [safe]
+          {% for repo in nas_git_agent_repositories %}
+              directory = /srv/git/{{ repo }}
+          {% endfor %}
+      when: not ansible_check_mode # Le compte et son home doivent déjà exister.
+
+    - name: Vérifier que le compte agent0 peut lire les dépôts
+      ansible.builtin.command:
+        argv: [runuser, -u, agent0, --, git, ls-remote, "/srv/git/{{ item }}"]
+      loop: "{{ nas_git_agent_repositories }}"
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Autoriser la clé de lab-studio pour agent0
+      ansible.posix.authorized_key:
+        user: agent0
+        key: "{{ agent0_public_key }}"
+        key_options: restrict # Désactive notamment les redirections SSH et le terminal.
+        state: present
+      when: not ansible_check_mode
+
+- name: Générer la configuration Samba
+  ansible.builtin.template:
+    src: templates/smb.conf.j2 # Modèle local contenant les paramètres Samba.
+    dest: /etc/samba/smb.conf # Configuration utilisée sur le NAS.
+    owner: root # Compte propriétaire du fichier.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Root peut modifier le fichier, les autres peuvent le lire.
+    backup: true # Conserve l’ancien fichier lors de son remplacement.
+    validate: /usr/bin/testparm -s %s # Valide le nouveau fichier avant installation.
+  notify: Redémarrer Samba # Programme le handler si la configuration change.
+
+- name: Préparer le dossier des compléments systemd de Samba
+  ansible.builtin.file:
+    path: /etc/systemd/system/smbd.service.d # Emplacement reconnu par systemd pour compléter smbd.
+    state: directory # Le dossier doit exister.
+    owner: root # Propriétaire du dossier.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Root peut modifier le dossier, les autres peuvent le parcourir.
+
+- name: Déclarer la dépendance de Samba au NVMe
+  ansible.builtin.template:
+    src: templates/smbd-storage.conf.j2 # Modèle contenant le contrôle du montage.
+    dest: /etc/systemd/system/smbd.service.d/nas-storage.conf # Reprend le fichier créé pendant la restauration.
+    owner: root # Propriétaire du fichier.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Root peut modifier le fichier, les autres peuvent le lire.
+  notify: Redémarrer Samba # Réapplique les contrôles au démarrage si la règle change.
+
+- name: Activer et démarrer Samba
+  ansible.builtin.systemd_service: # Gère le service avec les fonctions propres à systemd.
+    name: smbd # Service Samba.
+    daemon_reload: true # Demande à systemd de relire les définitions des services.
+    enabled: true # Active le service au boot.
+    state: started # Démarre le service s’il est arrêté.
+
+- name: Autoriser les clés SSH d’administration
+  ansible.posix.authorized_key: # Module fourni par la collection ansible.posix déjà installée.
+    user: pinas # Compte Linux auquel ces clés donnent accès.
+    key: "{{ lookup('ansible.builtin.file', 'pinas-authorized_keys') }}" # Lit les clés dans files/ du rôle sur le control node.
+    state: present # Garantit la présence des clés déclarées.
+    manage_dir: true # Gère le propriétaire et les permissions du dossier .ssh.
+    exclusive: false # Autorise aussi les autres clés déjà présentes sur le NAS.

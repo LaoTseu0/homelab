@@ -4,7 +4,7 @@
 > d'exploration de l'architecture d'inférence. Le décidé est distillé au fur
 > et à mesure dans [../architecture/inference.md](../architecture/inference.md).
 > Matériel : `jarvis-core` (Ryzen 9 7900X, RTX 4090 24 Go, 64 Go RAM) +
-> `jarvis-central` (Ryzen 5, RTX 2060 6 Go, 32 Go RAM), reliées en Ethernet filaire.
+> `lab-studio` (Ryzen 5, RTX 2060 6 Go, 32 Go RAM), reliées en Ethernet filaire.
 > Dernière mise à jour : 18 juillet 2026
 > Statut : **exploration — rien n'est monté, le modèle pour la RTX 4090
 > n'est pas choisi.** Décisions raisonnées, pas des résultats mesurés :
@@ -123,7 +123,7 @@ Réflexe naturel : « 24 + 6 = 30 Go de VRAM ». Non.
               |  LAN filaire
               v
   ┌─────────────────────────────────┐
-  │  jarvis-central — "front door"  │   Ryzen 5 / 2060 6 Go / 32 Go
+  │  lab-studio — "front door"  │   Ryzen 5 / 2060 6 Go / 32 Go
   │  allumée 24/7                   │
   │  • Open WebUI                   │
   │  • Orchestrateur / API          │
@@ -146,8 +146,8 @@ Réflexe naturel : « 24 + 6 = 30 Go de VRAM ». Non.
 ### Ce que ça débloque
 
 - **Le routeur trouve sa maison** : sur la 2060, avec le modèle d'embedding déjà chargé. Coût marginal nul.
-- **Le système ne s'arrête plus** : pendant que jarvis-core est monopolisée par gpt-oss 120B, l'interface et le RAG tournent sur jarvis-central.
-- **jarvis-core peut dormir** : jarvis-central la réveille en WoL (30-60 s + chargement). Surtout : jarvis-central reste allumée pour l'indexation nocturne pendant que jarvis-core est éteinte.
+- **Le système ne s'arrête plus** : pendant que jarvis-core est monopolisée par gpt-oss 120B, l'interface et le RAG tournent sur lab-studio.
+- **jarvis-core peut dormir** : lab-studio la réveille en WoL (30-60 s + chargement). Surtout : lab-studio reste allumée pour l'indexation nocturne pendant que jarvis-core est éteinte.
 
 ### Ce que la 2060 ne fait PAS
 
@@ -158,7 +158,7 @@ Elle n'offre pas un « petit modèle pour requêtes simples ». À 6 Go tu tiens
 
 ## 4. GPU AMD 16 Go : décision = non
 
-Le rôle de jarvis-central demande ~4-6 Go. La 2060 le fait déjà. 16 Go dans ce slot = 10 Go qui ne servent à rien.
+Le rôle de lab-studio demande ~4-6 Go. La 2060 le fait déjà. 16 Go dans ce slot = 10 Go qui ne servent à rien.
 
 Et en faire un nœud d'inférence ne tient pas : 16 Go = classe 13-14B, à côté d'une machine qui fait tourner un 27B à 50 tok/s. **Aucune capacité ajoutée, juste une redondance plus lente.**
 
@@ -171,7 +171,7 @@ Et en faire un nœud d'inférence ne tient pas : 16 Go = classe 13-14B, à côt�
 
 ROCm 7.2 (mars 2026) : première version avec support officiel RDNA 4, parité out-of-the-box Ollama / llama.cpp / vLLM, installeur unique Windows + Linux. Compter 75-85 % du débit NVIDIA. `llama.cpp` en ROCm/HIP = Linux uniquement mais plus rapide ; en Vulkan = partout, compatibilité plus large.
 
-Mais le verdict des tests récents tient : **n'utiliser AMD que si on a déjà de l'AMD, ou sur une affaire imbattable**, avec 5-10 h à prévoir pour débugger drivers et compilation. Et deux stacks de drivers à maintenir (CUDA sur jarvis-core, ROCm sur jarvis-central) **double le coût d'ops** — qui est le vrai coût de cette archi.
+Mais le verdict des tests récents tient : **n'utiliser AMD que si on a déjà de l'AMD, ou sur une affaire imbattable**, avec 5-10 h à prévoir pour débugger drivers et compilation. Et deux stacks de drivers à maintenir (CUDA sur jarvis-core, ROCm sur lab-studio) **double le coût d'ops** — qui est le vrai coût de cette archi.
 
 ### Le meilleur usage de cet argent
 
@@ -234,7 +234,7 @@ Tu pourrais le faire à la main : chercher dans tes docs, copier le passage, le 
 | Reranker | **GPU réel** | ~100 ms GPU vs 2-3 s CPU |
 | Génération LLM | **VRAM** | ~20 s → **99 % du coût** |
 
-**→ Le RAG n'a pas besoin de VRAM.** Le GPU ne sert qu'à **l'indexation** et au **reranker**. C'est la seule raison d'être GPU de jarvis-central.
+**→ Le RAG n'a pas besoin de VRAM.** Le GPU ne sert qu'à **l'indexation** et au **reranker**. C'est la seule raison d'être GPU de lab-studio.
 
 ### Bi-encodeur vs cross-encodeur
 
@@ -313,7 +313,7 @@ En local les tokens sont gratuits. Mais :
 3. **Classifieur** — la vraie mission du routeur : décider **s'il faut du RAG** (binaire, ~10 ms, modèle d'embedding déjà chargé). Mais le seuil fait le même boulot pour zéro complexité → **sauter cette étape**.
 4. **RAG agentique** — donner au LLM un outil `chercher_dans_ma_doc(requête)`. Il peut **reformuler**, chercher plusieurs fois, affiner. `gpt-oss 20B` est taillé pour ça. Coût : +1 aller-retour LLM = +20 s.
 
-**Plan :** seuil maintenant → reranker sur jarvis-central → agentique seulement si la recherche en une passe rate des choses (probablement jamais pour de la doc perso).
+**Plan :** seuil maintenant → reranker sur lab-studio → agentique seulement si la recherche en une passe rate des choses (probablement jamais pour de la doc perso).
 
 ---
 
@@ -402,12 +402,12 @@ Ce sont celles qu'on paie cher si on se trompe.
 
 1. **Vérifier la fréquence RAM.** `sudo dmidecode -t memory | grep -E "Speed|Size"` — 25 % gratuits si EXPO est off.
 2. **Vérifier alim + slots PCIe de jarvis-core.** Décide de l'avenir de l'archi.
-3. **Monter le minimum viable** : Qwen3.6-27B sur jarvis-core, Open WebUI sur jarvis-central. Rien d'autre. Envoyer une requête.
+3. **Monter le minimum viable** : Qwen3.6-27B sur jarvis-core, Open WebUI sur lab-studio. Rien d'autre. Envoyer une requête.
 4. **Vivre avec pendant deux semaines.** Sans RAG, sans routeur, sans 120B.
 
 ### Ensuite, dans l'ordre
 
-5. RAG minimal sur jarvis-central : chunking → BGE-M3 → Qdrant → les 15 lignes.
+5. RAG minimal sur lab-studio : chunking → BGE-M3 → Qdrant → les 15 lignes.
 6. **Écrire 30 questions de test** (15 qui doivent déclencher le RAG, 15 qui ne doivent pas) — **avant** de toucher au seuil.
 7. Régler le seuil de score sur ces 30 questions.
 8. Recherche hybride (BM25 + vecteurs, RRF). Pas une optimisation : un prérequis.

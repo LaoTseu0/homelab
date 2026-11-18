@@ -1,0 +1,213 @@
+---
+- name: Exiger la vérification préalable de l'installation Jarvis existante
+  ansible.builtin.assert:
+    that:
+      - docker_enabled | bool
+      - jarvis_migration_ready | bool
+      - ansible_facts.architecture == 'x86_64'
+    fail_msg: Auditer GPU, volumes, sauvegarde HA et versions avant de prendre en charge Jarvis.
+
+- name: Vérifier le GPU et le runtime NVIDIA sans les reconfigurer
+  ansible.builtin.command:
+    argv: "{{ item }}"
+  loop:
+    - [nvidia-smi, -L]
+    - [docker, info, --format, '{{ "{{json .Runtimes}}" }}']
+  register: jarvis_gpu
+  changed_when: false
+  check_mode: false
+
+- name: Exiger le runtime NVIDIA existant
+  ansible.builtin.assert:
+    that:
+      - "'nvidia' in jarvis_gpu.results[1].stdout"
+    fail_msg: Installer et valider NVIDIA Container Toolkit avant le déploiement.
+
+- name: Préparer les chemins de données existants
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "{{ omit if (jarvis_preserve_data_permissions | default(false) | bool and item != '/srv/jarvis') else '0755' }}"
+  loop:
+    - /srv/jarvis
+    - /srv/homeassistant
+    - /srv/wyoming/whisper
+    - /srv/wyoming/piper
+
+- name: Préparer le dossier des secrets
+  ansible.builtin.file:
+    path: /srv/jarvis/secrets
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Déployer le Compose vocal existant, source unique
+  ansible.builtin.copy:
+    src: "{{ homelab_repo_root }}/deploiement/lab-studio/docker-compose.yml"
+    dest: /srv/jarvis/docker-compose.yml
+    mode: '0644'
+    backup: true
+    validate: /usr/bin/docker compose -f %s config --quiet
+  register: jarvis_compose_source
+
+- name: Déclarer les images du registry par-dessus le Compose principal
+  ansible.builtin.copy:
+    dest: /srv/jarvis/compose.images.yml
+    mode: '0644'
+    content: |
+      services:
+      {% for service, image in jarvis_image_overrides.items() %}
+        {{ service }}:
+          image: {{ image | to_json }}
+      {% endfor %}
+  register: jarvis_compose_images
+  when: jarvis_image_overrides | default({}) | length > 0
+
+- name: Déployer la configuration d'observabilité existante
+  ansible.builtin.copy:
+    src: "{{ homelab_repo_root }}/deploiement/lab-studio/{{ item }}"
+    dest: "/srv/jarvis/{{ item }}"
+    mode: preserve
+  loop:
+    - docker-compose.observability.yml
+    - observability/
+  register: jarvis_observability_files
+  when: jarvis_enabled_observability | bool
+
+- name: Distribuer les secrets préparés localement (jamais générés à chaque lancement)
+  ansible.builtin.copy:
+    src: "{{ homelab_secrets_dir }}/{{ item }}"
+    dest: "/srv/jarvis/secrets/{{ item }}"
+    owner: root
+    group: root
+    mode: '0600'
+  loop: "{{ ['grafana.env'] + (['jarvis-exporter.env'] if (jarvis_observability_exporter_enabled | default(true) | bool) else []) }}"
+  no_log: true
+  register: jarvis_observability_secrets
+  when: jarvis_enabled_observability | bool
+
+- name: Exiger une image publiée ou autoriser explicitement le build de transition
+  ansible.builtin.assert:
+    that:
+      - (jarvis_exporter_image | length > 0) or (jarvis_exporter_build | bool)
+    fail_msg: Renseigner jarvis_exporter_image ou autoriser le build local de transition.
+  when:
+    - jarvis_enabled_observability | bool
+    - jarvis_observability_exporter_enabled | default(true) | bool
+
+- name: Sélectionner le profil de supervision et sa configuration
+  ansible.builtin.copy:
+    dest: /srv/jarvis/compose.ansible.yml
+    mode: '0644'
+    content: |
+      services:
+      {% if jarvis_observability_exporter_enabled | default(true) | bool %}
+        jarvis-exporter:
+          image: {{ jarvis_exporter_image | default('jarvis-exporter:local', true) | to_json }}
+      {% else %}
+        prometheus:
+          volumes:
+            - ./observability/prometheus/prometheus-host.yml:/etc/prometheus/prometheus.yml:ro
+        grafana:
+          volumes:
+            - ./observability/grafana/dashboards-host:/var/lib/grafana/dashboards:ro
+      {% endif %}
+  register: jarvis_observability_overlay
+  when: jarvis_enabled_observability | bool
+
+- name: Préserver le volume externe des modèles
+  community.docker.docker_volume:
+    name: ollama
+    state: present
+
+- name: Appliquer la configuration Compose de Jarvis
+  vars:
+    jarvis_compose_files: >-
+      {{ ['docker-compose.yml']
+         + (['docker-compose.observability.yml', 'compose.ansible.yml'] if (jarvis_enabled_observability | bool) else [])
+         + (['compose.images.yml'] if (jarvis_image_overrides | default({}) | length > 0) else []) }}
+    jarvis_compose_profiles: >-
+      {{ ['jarvis-exporter'] if ((jarvis_enabled_observability | bool)
+         and (jarvis_observability_exporter_enabled | default(true) | bool)) else [] }}
+  block:
+    - name: Démarrer les services Compose et attendre leur disponibilité
+      community.docker.docker_compose_v2:
+        project_src: /srv/jarvis
+        project_name: jarvis
+        files: "{{ jarvis_compose_files }}"
+        profiles: "{{ jarvis_compose_profiles }}"
+        state: present
+        pull: "{{ compose_pull }}"
+        build: "{{ 'always' if jarvis_exporter_build else 'never' }}"
+        wait: true
+        wait_timeout: 180
+        remove_orphans: false
+      when: >-
+        not ansible_check_mode or not
+        (jarvis_compose_source.changed or jarvis_compose_images.changed or
+         jarvis_observability_files.changed or jarvis_observability_secrets.changed or
+         jarvis_observability_overlay.changed)
+
+    - name: Recharger les configurations montées lorsque leurs fichiers ont changé
+      community.docker.docker_compose_v2:
+        project_src: /srv/jarvis
+        project_name: jarvis
+        files: "{{ jarvis_compose_files }}"
+        profiles: "{{ jarvis_compose_profiles }}"
+        services: "{{ ['prometheus', 'grafana'] + jarvis_compose_profiles }}"
+        state: restarted
+        dependencies: false
+      when:
+        - not ansible_check_mode
+        - jarvis_enabled_observability | bool
+        - jarvis_observability_files.changed
+
+- name: Vérifier les modèles déjà installés
+  ansible.builtin.command:
+    argv: [docker, exec, ollama, ollama, list]
+  register: jarvis_installed_models
+  changed_when: false
+  retries: 10
+  delay: 3
+  until: jarvis_installed_models.rc == 0
+  when: jarvis_models | length > 0 and not ansible_check_mode
+
+- name: Télécharger uniquement les modèles absents
+  ansible.builtin.command:
+    argv: [docker, exec, ollama, ollama, pull, "{{ item }}"]
+  vars:
+    jarvis_model_tagged: "{{ item if ':' in item.rsplit('/', 1)[-1] else item ~ ':latest' }}"
+  loop: "{{ jarvis_models }}"
+  when:
+    - not ansible_check_mode
+    - jarvis_model_tagged not in (jarvis_installed_models.stdout_lines[1:] | map('split') | map('first') | list)
+
+- name: Vérifier le satellite existant avant de gérer son service
+  ansible.builtin.stat:
+    path: /home/studio/wyoming-satellite/script/run
+  register: jarvis_satellite
+  when: satellite_enabled | bool
+
+- name: Exiger le logiciel satellite existant
+  ansible.builtin.assert:
+    that: jarvis_satellite.stat.exists
+    fail_msg: Installer le satellite dans /home/studio/wyoming-satellite avant sa prise en charge.
+  when: satellite_enabled | bool
+
+- name: Déployer l'unité systemd existante du satellite
+  ansible.builtin.copy:
+    src: "{{ homelab_repo_root }}/deploiement/lab-studio/wyoming-satellite.service"
+    dest: /etc/systemd/system/wyoming-satellite.service
+    mode: '0644'
+    backup: true
+  register: jarvis_satellite_unit
+  when: satellite_enabled | bool
+
+- name: Appliquer l’état voulu du satellite et relire son unité si elle change
+  ansible.builtin.systemd_service:
+    name: wyoming-satellite
+    daemon_reload: "{{ jarvis_satellite_unit.changed }}"
+    enabled: "{{ satellite_service_active | default(true) | bool }}"
+    state: "{{ ('restarted' if jarvis_satellite_unit.changed else 'started') if (satellite_service_active | default(true) | bool) else 'stopped' }}"
+  when: satellite_enabled | bool

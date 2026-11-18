@@ -1,0 +1,35 @@
+- name: Lire le certificat public depuis le NAS
+  ansible.builtin.slurp:
+    src: /srv/registry/registry.crt
+  delegate_to: nas # Ce fichier est lu sur le NAS.
+  become: false # La clé SSH pinas suffit à lire le certificat public.
+  register: registry_public_certificate
+
+- name: Créer le dossier de confiance Docker pour le registry
+  ansible.builtin.file:
+    path: "/etc/docker/certs.d/{{ registry_pull_endpoint }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Installer le certificat public du registry dans Docker
+  ansible.builtin.copy:
+    content: "{{ registry_public_certificate.content | b64decode }}"
+    dest: "/etc/docker/certs.d/{{ registry_pull_endpoint }}/ca.crt"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Enregistrer le compte de lecture pour le Docker exécuté par Ansible
+  community.docker.docker_login:
+    registry_url: "{{ registry_pull_endpoint }}"
+    username: "{{ hostvars['nas'].registry_reader_user }}"
+    password: "{{ hostvars['nas'].registry_reader_password }}"
+  become: true
+  no_log: true
+  when:
+    - registry_client_login | default(false) | bool
+    - not ansible_check_mode

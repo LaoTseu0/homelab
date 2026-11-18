@@ -26,8 +26,8 @@
 | Exposition Internet | ✅ aucune | LAN only, pas de port forwardé sur la box |
 | Cloisonnement NAS | ✅ bon | comptes `pinas` / groupe `agents` / `oce` séparés |
 | Miroir GitHub du NAS (sortant) | ⚠️ | premier flux sortant du homelab : le contenu des dépôts miroités quitte le LAN. Exige **dépôts privés** + **zéro secret versionné** ; clé sans passphrase sur la microSD, limitée par une **Deploy Key** par dépôt (voir [nas.md](nas.md) §4) |
-| SSH jarvis-central | ⚠️ | mot de passe encore accepté |
-| Pare-feu jarvis-central | ❌ | aucun (UFW non configuré) |
+| SSH lab-studio | ⚠️ | mot de passe encore accepté |
+| Pare-feu lab-studio | ❌ | aucun (UFW non configuré) |
 | API Ollama (11434) | ⚠️ | ouverte à tout le LAN, **sans authentification** |
 | Ports Wyoming (10200/10300/10400/10700) | ⚠️ | ouverts à tout le LAN, sans authentification |
 | Conteneur HA | ⚠️ | `--privileged` = accès matériel très large |
@@ -49,10 +49,10 @@ Par ordre de rapport protection/effort décroissant :
 1. **Restreindre Ollama et Wyoming à `127.0.0.1`** — tous leurs clients
    (HA, satellite) sont sur la machine elle-même : publier ces ports
    (11434, 10200, 10300, 10400) sur l'interface locale seulement, dans le
-   compose de [deploiement/jarvis-central/](../deploiement/jarvis-central/).
+   compose de [deploiement/lab-studio/](../deploiement/lab-studio/).
    Coût : 5 minutes. Le jour où un client distant existera (satellite sur
    Pi 5), on ouvrira ce port précis, pas tout.
-2. **Pare-feu UFW sur jarvis-central** — politique deny entrant par défaut,
+2. **Pare-feu UFW sur lab-studio** — politique deny entrant par défaut,
    n'autoriser que SSH (22) et HA (8123) depuis le sous-réseau local.
 3. **SSH par clé uniquement** (`PasswordAuthentication no`) — supprime la
    surface « mot de passe devinable », aligne le serveur sur la philosophie
@@ -67,7 +67,7 @@ Par ordre de rapport protection/effort décroissant :
    (`--device /dev/ttyUSB0` quand le coordinateur Zigbee arrivera).
 
 7. **API LLM de jarvis-core** (dès qu'elle existera) — pare-feu n'autorisant
-   que `jarvis-central` sur le port d'inférence, SSH par clé uniquement,
+   que `lab-studio` sur le port d'inférence, SSH par clé uniquement,
    même posture que le reste du parc (voir [inference.md](inference.md) §6).
 
 ## 4. Nice-to-have (plus tard, si le besoin se précise)

@@ -1,0 +1,1 @@
+ansible_python_interpreter: /usr/bin/python3 # Python à utiliser pour exécuter les modules sur les hôtes du groupe all.

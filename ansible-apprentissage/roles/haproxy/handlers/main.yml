@@ -1,0 +1,4 @@
+- name: Redémarrer HAProxy # Nom correspondant au « notify » de la tâche qui génère la configuration.
+  ansible.builtin.service: # Module qui gère les services sur la machine cible.
+    name: haproxy # Nom du service installé sur le Pi 4.
+    state: restarted # Demande un redémarrage lorsque le handler est déclenché.

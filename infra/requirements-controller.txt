@@ -1,0 +1,2 @@
+# Contrôleur Linux uniquement. Python fourni par mise.
+ansible-core>=2.20,<2.21

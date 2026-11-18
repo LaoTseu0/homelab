@@ -1,0 +1,80 @@
+---
+- name: Installer les services du NAS
+  ansible.builtin.apt:
+    name: [git, samba]
+    state: present
+
+- name: Créer le groupe d'accès aux dépôts
+  ansible.builtin.group:
+    name: agents
+    state: present
+
+- name: Autoriser l'administrateur à gérer les dépôts
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: agents
+    append: true
+
+- name: Créer le dossier Git sans changer récursivement les dépôts restaurés
+  ansible.builtin.file:
+    path: /srv/git
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: agents
+    mode: '2775'
+
+- name: Vérifier les noms de nouveaux dépôts explicitement demandés
+  ansible.builtin.assert:
+    that:
+      - item is match('^[a-zA-Z0-9][a-zA-Z0-9._-]*\.git$')
+  loop: "{{ git_repositories }}"
+
+- name: Créer uniquement les nouveaux dépôts absents
+  ansible.builtin.command:
+    argv: [git, init, --bare, --shared=group, --initial-branch=main, "/srv/git/{{ item }}"]
+    creates: "/srv/git/{{ item }}/HEAD"
+  become_user: "{{ ansible_user }}"
+  loop: "{{ git_repositories }}"
+
+- name: Créer les utilisateurs de partage sans shell
+  ansible.builtin.user:
+    name: "{{ item }}"
+    shell: /usr/sbin/nologin
+    create_home: false
+  loop: "{{ samba_users }}"
+
+- name: Contrôler les chemins et comptes des partages
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[a-zA-Z0-9_-]+$')
+      - item.path is match('^/srv/partages/[a-zA-Z0-9_-]+$')
+      - item.user in samba_users
+  loop: "{{ samba_shares }}"
+
+- name: Préparer les dossiers des partages sans toucher récursivement aux fichiers
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.user }}"
+    group: "{{ item.user }}"
+    mode: '0700'
+  loop: "{{ samba_shares }}"
+
+- name: Gérer les partages déclarés après restauration
+  ansible.builtin.template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+    validate: /usr/bin/testparm -s %s
+  when: samba_shares | length > 0
+  notify: Redémarrer Samba
+
+- name: Activer Samba lorsque des partages sont déclarés
+  ansible.builtin.systemd_service:
+    name: smbd
+    enabled: true
+    state: started
+  when: samba_shares | length > 0

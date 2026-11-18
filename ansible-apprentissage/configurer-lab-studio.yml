@@ -1,0 +1,237 @@
+- name: Configurer lab-studio
+  hosts: lab-studio
+  become: true
+  vars:
+    homelab_repo_root: "{{ playbook_dir }}/.."
+    docker_enabled: true
+    jarvis_migration_ready: true # Les montages de l’installation actuelle sont contrôlés avant Compose.
+    jarvis_enabled_observability: "{{ lab_studio_observability_enabled }}"
+    jarvis_observability_exporter_enabled: false # La supervision de la machine s’active séparément.
+    homelab_secrets_dir: "{{ homelab_repo_root }}/infra/secrets/{{ inventory_hostname }}"
+    jarvis_preserve_data_permissions: true # Conserver les permissions des données déjà sur la tour.
+    jarvis_exporter_build: false
+    jarvis_models: "{{ lab_studio_models }}"
+    jarvis_image_overrides: "{{ lab_studio_registry_images | combine(lab_studio_monitoring_images if (lab_studio_observability_enabled | bool) else {}) }}"
+    compose_pull: missing # Télécharge une image seulement si elle manque sur la tour.
+    satellite_enabled: true # Gérer les fichiers du satellite même quand il est à l’arrêt.
+    satellite_service_active: "{{ lab_studio_satellite_active }}"
+    studio_satellite_path: /home/studio/wyoming-satellite
+
+  tasks:
+    - name: Confirmer le système de la tour
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Ubuntu'
+          - ansible_facts.architecture == 'x86_64'
+        fail_msg: Cette configuration GPU cible la tour Ubuntu amd64.
+
+    - name: Préparer Docker avec le rôle commun
+      ansible.builtin.import_role:
+        name: "{{ playbook_dir }}/../infra/roles/docker"
+      tags: [socle]
+
+    - name: Préparer la prise en charge du GPU
+      tags: [socle]
+      block:
+        - name: Installer le pilote NVIDIA et le module correspondant au noyau actif
+          ansible.builtin.apt:
+            name:
+              - "nvidia-driver-{{ lab_studio_nvidia_branch }}"
+              - "linux-modules-nvidia-{{ lab_studio_nvidia_branch }}-generic"
+              - "linux-modules-nvidia-{{ lab_studio_nvidia_branch }}-{{ ansible_facts.kernel }}"
+            state: present
+            update_cache: true
+            cache_valid_time: 3600
+
+        - name: Préparer le dépôt NVIDIA sur une nouvelle installation
+          when: "'nvidia-container-toolkit' not in ansible_facts.packages"
+          block:
+            - name: Chercher le dépôt NVIDIA installé manuellement
+              ansible.builtin.stat:
+                path: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+              register: studio_nvidia_legacy_source
+
+            - name: Installer la clé APT du dépôt NVIDIA
+              ansible.builtin.get_url:
+                url: https://nvidia.github.io/libnvidia-container/gpgkey
+                dest: /etc/apt/keyrings/studio-nvidia.asc
+                mode: '0644'
+              when: not studio_nvidia_legacy_source.stat.exists
+
+            - name: Déclarer le dépôt APT de NVIDIA Container Toolkit
+              ansible.builtin.copy:
+                dest: /etc/apt/sources.list.d/studio-nvidia.sources
+                mode: '0644'
+                content: |
+                  Types: deb
+                  URIs: https://nvidia.github.io/libnvidia-container/stable/deb/amd64
+                  Suites: /
+                  Signed-By: /etc/apt/keyrings/studio-nvidia.asc
+              when: not studio_nvidia_legacy_source.stat.exists
+
+        - name: Installer NVIDIA Container Toolkit
+          ansible.builtin.apt:
+            name: nvidia-container-toolkit
+            state: present
+            update_cache: true
+          when: "'nvidia-container-toolkit' not in ansible_facts.packages and not ansible_check_mode"
+
+        - name: Lire les runtimes Docker
+          ansible.builtin.command:
+            argv: [docker, info, --format, '{{ "{{json .Runtimes}}" }}']
+          register: studio_docker_runtimes
+          check_mode: false
+          changed_when: false
+
+        - name: Ajouter le runtime NVIDIA si nécessaire
+          when:
+            - not ansible_check_mode
+            - "'nvidia' not in (studio_docker_runtimes.stdout | from_json)"
+          block:
+            - name: Préparer la configuration Docker en conservant ses réglages
+              ansible.builtin.command:
+                argv: [nvidia-ctk, runtime, configure, --runtime=docker, --dry-run]
+              register: studio_docker_nvidia_config
+              changed_when: false
+
+            - name: Activer le runtime dans la configuration Docker
+              ansible.builtin.copy:
+                dest: /etc/docker/daemon.json
+                content: "{{ studio_docker_nvidia_config.stdout | from_json | to_nice_json }}\n"
+                mode: '0644'
+                backup: true
+                validate: /usr/bin/dockerd --validate --config-file=%s
+
+            - name: Redémarrer Docker pour charger le runtime NVIDIA
+              ansible.builtin.systemd_service:
+                name: docker
+                state: restarted
+
+        - name: Vérifier si le pilote NVIDIA répond
+          ansible.builtin.command: nvidia-smi -L
+          register: studio_gpu_probe
+          check_mode: false
+          changed_when: false
+          failed_when: false
+
+        - name: Charger le module NVIDIA si nécessaire
+          ansible.builtin.command: modprobe nvidia
+          when: studio_gpu_probe.rc != 0 and not ansible_check_mode
+
+    - name: Vérifier que chaque image déclarée correspond à un service et à un digest NAS
+      ansible.builtin.assert:
+        that:
+          - item.key in ['ollama', 'homeassistant', 'whisper', 'piper', 'openwakeword', 'prometheus', 'grafana', 'node-exporter']
+          - item.value is match('^[^/]+:5001/[^@ ]+@sha256:[a-f0-9]{64}$')
+          - item.value.startswith(hostvars['nas'].registry_lan_ip ~ ':5001/')
+      loop: "{{ jarvis_image_overrides | dict2items }}"
+
+    - name: Vérifier les trois références de supervision si elle est activée
+      ansible.builtin.assert:
+        that:
+          - lab_studio_monitoring_images.keys() | sort == ['grafana', 'node-exporter', 'prometheus']
+        fail_msg: Publier les trois images de supervision et renseigner leurs digests dans lab_studio_monitoring_images.
+      when: lab_studio_observability_enabled | bool
+
+    - name: Préparer la confiance et le compte de lecture Docker pour les images NAS
+      ansible.builtin.include_role:
+        name: registry-client
+      vars:
+        registry_pull_endpoint: "{{ hostvars['nas'].registry_lan_ip }}:5001"
+        registry_client_login: true
+      when: jarvis_image_overrides | length > 0
+
+    - name: Inventorier les conteneurs existants avant la reprise
+      ansible.builtin.command:
+        argv: [docker, container, ls, --all, --format, '{{ "{{.Names}}" }}']
+      register: studio_existing_containers
+      check_mode: false
+      changed_when: false
+
+    - name: Lire les montages actuels des conteneurs qui ont des données persistantes
+      ansible.builtin.command:
+        argv: [docker, container, inspect, --format, '{{ "{{json .Mounts}}" }}', "{{ item.container }}"]
+      loop:
+        - { container: homeassistant, target: /config, type: bind, attribute: Source, source: /srv/homeassistant }
+        - { container: ollama, target: /root/.ollama, type: volume, attribute: Name, source: ollama }
+        - { container: whisper, target: /data, type: bind, attribute: Source, source: /srv/wyoming/whisper }
+        - { container: piper, target: /data, type: bind, attribute: Source, source: /srv/wyoming/piper }
+      loop_control:
+        label: "{{ item.container }}"
+      register: studio_existing_mounts
+      when: item.container in studio_existing_containers.stdout_lines
+      check_mode: false
+      changed_when: false
+
+    - name: Comparer les montages actifs à ceux du Compose versionné
+      ansible.builtin.assert:
+        that:
+          - item.item.source in (item.stdout | from_json | selectattr('Destination', 'equalto', item.item.target) | selectattr('Type', 'equalto', item.item.type) | map(attribute=item.item.attribute) | list)
+        fail_msg: "Le montage de {{ item.item.container }} diffère du Compose. Comparer les chemins avant la reprise."
+      loop: "{{ studio_existing_mounts.results }}"
+      loop_control:
+        label: "{{ item.item.container }}"
+      when: not item.skipped | default(false)
+
+    - name: Installer les dépendances système du satellite
+      ansible.builtin.apt:
+        name: [alsa-utils, git, python3-venv]
+        state: present
+
+    - name: Vérifier la présence du clone du satellite
+      ansible.builtin.stat:
+        path: "{{ studio_satellite_path }}/script/run"
+      register: studio_satellite_source
+
+    - name: Installer le satellite si son clone manque
+      ansible.builtin.git:
+        repo: https://github.com/rhasspy/wyoming-satellite.git
+        dest: "{{ studio_satellite_path }}"
+        version: "{{ lab_studio_satellite_version }}"
+      become: false # Le clone appartient à studio, l’utilisateur SSH.
+      when: not studio_satellite_source.stat.exists
+
+    - name: Vérifier l’environnement Python existant du satellite
+      ansible.builtin.command:
+        argv: ["{{ studio_satellite_path }}/.venv/bin/python", -c, "import wyoming_satellite"]
+      become: false
+      register: studio_satellite_python
+      check_mode: false
+      changed_when: false
+      failed_when: false
+
+    - name: Préparer les dépendances Python du satellite si nécessaire
+      ansible.builtin.command:
+        argv: ["{{ studio_satellite_path }}/script/setup"]
+        chdir: "{{ studio_satellite_path }}"
+      become: false
+      when: studio_satellite_python.rc != 0 and not ansible_check_mode
+
+    - name: Appliquer le Compose et gérer l’unité du satellite
+      ansible.builtin.import_role:
+        name: "{{ playbook_dir }}/../infra/roles/jarvis"
+
+    - name: Vérifier la collecte et l’interface de supervision
+      when: lab_studio_observability_enabled | bool and not ansible_check_mode
+      block:
+        - name: Attendre que Prometheus collecte les métriques de la tour
+          ansible.builtin.uri:
+            url: http://127.0.0.1:9090/api/v1/targets?state=active
+            use_proxy: false
+          register: studio_monitoring_targets
+          until: >-
+            studio_monitoring_targets.status == 200 and
+            (studio_monitoring_targets.json.data.activeTargets | default([])
+             | selectattr('labels.job', 'equalto', 'node-exporter')
+             | selectattr('health', 'equalto', 'up') | list | length > 0)
+          retries: 15
+          delay: 3
+
+        - name: Attendre que Grafana réponde à son contrôle de santé
+          ansible.builtin.uri:
+            url: http://127.0.0.1:3000/api/health
+            use_proxy: false
+          register: studio_grafana_health
+          until: studio_grafana_health.status == 200
+          retries: 15
+          delay: 3

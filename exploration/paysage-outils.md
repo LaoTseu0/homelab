@@ -51,7 +51,7 @@ section ci-dessous, avec ses alternatives.
 
 | Choix | Statut | Où |
 |---|---|---|
-| Ubuntu Server + Docker + NVIDIA Container Toolkit | ✅ jarvis-central | [installation.md](../serveurs/jarvis-central/installation.md) |
+| Ubuntu Server + Docker + NVIDIA Container Toolkit | ✅ lab-studio | [installation.md](../serveurs/lab-studio/installation.md) |
 | OS de jarvis-core | 🧭 à trancher | [inference.md §6](../architecture/inference.md) |
 
 | Alternative | Nature | Quand y penser |
@@ -67,7 +67,7 @@ section ci-dessous, avec ses alternatives.
 
 | Choix | Statut |
 |---|---|
-| Qwen3 4B Instruct (voix, tool calling) | ✅ jarvis-central |
+| Qwen3 4B Instruct (voix, tool calling) | ✅ lab-studio |
 | Qwen3.6-27B / Qwen3-Coder 30B-A3B / Gemma 4 12B QAT / gpt-oss 120B | 🧭 candidats jarvis-core — voir [inference.md §4](../architecture/inference.md) |
 
 | Alternative | Nature | Quand y penser |
@@ -82,7 +82,7 @@ section ci-dessous, avec ses alternatives.
 
 | Choix | Statut |
 |---|---|
-| Ollama | ✅ jarvis-central (voix) — intégration HA native |
+| Ollama | ✅ lab-studio (voix) — intégration HA native |
 | llama.cpp / Ollama / vLLM | 🧭 à trancher pour jarvis-core ([inference.md §6](../architecture/inference.md)) |
 
 | Alternative | Nature | Quand y penser |

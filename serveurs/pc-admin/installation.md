@@ -4,8 +4,9 @@
 > administrer les machines du homelab en SSH par clé.
 > Adresses IP : [../../architecture/reseau.md](../../architecture/reseau.md).
 > Dernière mise à jour : 18 juillet 2026
-> Statut : accès `nas` et `jarvis-central` en place ; `jarvis-core` à faire
-> (compte à créer à l'installation de son socle)
+> Pour la première connexion à `lab-studio` avec `studio`, suivre la
+> [procédure de bascule](../lab-studio/renommer.md). L’accès à `jarvis-core`
+> reste à préparer.
 
 ---
 
@@ -23,7 +24,7 @@ accès à révoquer), et un nommage unique partout :
 | Machine | Alias | User | IP |
 |---|---|---|---|
 | NAS | `nas` | `pinas` | 192.168.1.80 |
-| Serveur Jarvis | `jarvis-central` | `jarvis` | 192.168.1.57 |
+| Serveur Jarvis | `lab-studio` | `studio` | 192.168.50.252 |
 | Tour d'inférence | `jarvis-core` | *(à créer)* | 192.168.1.187 |
 
 ## 2. Créer une paire de clés (une par machine)
@@ -39,7 +40,7 @@ ssh-keygen -t ed25519 -C "pc-admin" -f C:\Users\antho\.ssh\id_ed25519_nas
   sans `-f`, ssh-keygen proposerait le nom par défaut `id_ed25519` et
   écraserait la clé précédente.
 
-Répéter pour chaque machine (`id_ed25519_jarvis-central`,
+Répéter pour chaque machine (`id_ed25519_jcentral`,
 `id_ed25519_jarvis-core`).
 
 ## 3. Déclarer les alias — fichier `C:\Users\antho\.ssh\config`
@@ -51,10 +52,10 @@ Host nas
     IdentityFile C:\Users\antho\.ssh\id_ed25519_nas
     IdentitiesOnly yes
 
-Host jarvis-central
-    HostName 192.168.1.57
-    User jarvis
-    IdentityFile C:\Users\antho\.ssh\id_ed25519_jarvis-central
+Host lab-studio
+    HostName 192.168.50.252
+    User studio
+    IdentityFile C:\Users\antho\.ssh\id_ed25519_jcentral
     IdentitiesOnly yes
 
 Host jarvis-core
@@ -85,7 +86,7 @@ Répéter pour chaque machine avec sa clé et son compte.
 
 ```powershell
 ssh nas
-ssh jarvis-central
+ssh lab-studio
 ```
 
 La connexion doit s'ouvrir **sans mot de passe**. C'est le prérequis pour

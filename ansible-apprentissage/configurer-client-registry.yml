@@ -1,0 +1,8 @@
+- name: Configurer la confiance Docker de lab-studio
+  hosts: lab-studio # Tour qui téléchargera les images.
+  gather_facts: false
+  vars:
+    registry_pull_endpoint: "{{ hostvars['nas'].registry_lan_ip }}:5001" # Adresse de téléchargement déclarée pour le NAS.
+
+  roles:
+    - registry-client

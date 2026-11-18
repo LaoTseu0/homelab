@@ -8,3 +8,9 @@ __pycache__/
 
 # Config locale de l'éditeur Obsidian (préférences machine, pas de la doc)
 .obsidian/
+
+# Administration locale : inventaire réel, secrets et rapports hors Git.
+infra/inventory.local.yml
+infra/secrets/
+infra/reports/
+infra/.collections/

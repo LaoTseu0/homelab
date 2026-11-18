@@ -50,7 +50,7 @@ HA reste le back-end domotique. Seule la couche d'orchestration change.
    quelle VRAM exigée, qualité du français ?
 3. **Le LLM de réflexion** : local (gros GPU à acquérir) ou fallback cloud
    (contredit le 100 % local — acceptable pour certaines demandes ?) ?
-4. **Où vit l'orchestrateur** : conteneur sur jarvis-central ? Implémente-t-il
+4. **Où vit l'orchestrateur** : conteneur sur lab-studio ? Implémente-t-il
    le protocole Wyoming côté satellites (transparent pour eux) ?
 5. **Le wake word** reste-t-il openWakeWord en amont, inchangé ?
 6. **Continuité de conversation** : une demande légère qui devient technique

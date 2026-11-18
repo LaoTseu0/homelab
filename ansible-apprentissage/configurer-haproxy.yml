@@ -1,0 +1,7 @@
+- name: Déployer la configuration du relais SMB # Description du play.
+  hosts: lab-1 # Hôte ciblé dans l’inventaire.
+  gather_facts: false # Les tâches actuelles utilisent des valeurs explicites et les variables d’inventaire.
+  become: true # Exécute les tâches avec sudo sur le Pi 4.
+
+  roles: # Liste des rôles à appliquer aux hôtes sélectionnés.
+    - haproxy # Charge les tâches et les handlers du dossier roles/haproxy.

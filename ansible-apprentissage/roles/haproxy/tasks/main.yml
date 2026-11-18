@@ -1,0 +1,21 @@
+- name: Installer HAProxy
+  ansible.builtin.apt:
+    name: haproxy
+    state: present
+
+- name: Générer la configuration HAProxy
+  ansible.builtin.template:
+    src: haproxy-samba.cfg.j2 # Modèle situé dans templates/ du rôle.
+    dest: /etc/haproxy/haproxy.cfg # Fichier généré sur le Pi 4.
+    owner: root # Compte propriétaire du fichier.
+    group: root # Groupe propriétaire du fichier.
+    mode: '0644' # Propriétaire en lecture/écriture, groupe et autres en lecture.
+    backup: true # Sauvegarde l’ancien fichier lors de son remplacement.
+    validate: /usr/sbin/haproxy -c -f %s # Vérifie le fichier généré avant son installation.
+  notify: Redémarrer HAProxy # Programme le handler si cette tâche signale un changement.
+
+- name: Activer et démarrer HAProxy
+  ansible.builtin.service:
+    name: haproxy
+    enabled: true
+    state: started

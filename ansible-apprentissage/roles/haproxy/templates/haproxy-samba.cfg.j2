@@ -1,0 +1,17 @@
+# Configuration déployée par le rôle Ansible haproxy.
+# Relais SMB du réseau Maison vers le NAS du Homelab
+global
+    user haproxy
+    group haproxy
+
+defaults
+    mode tcp
+    timeout connect 5s
+    timeout client 10m
+    timeout server 10m
+
+listen samba_maison
+    bind {{ haproxy_listen_address }}:445
+    acl telephones_autorises src {{ haproxy_allowed_sources | join(' ') }}
+    tcp-request connection reject unless telephones_autorises
+    server nas {{ haproxy_nas_address }}:445

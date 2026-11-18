@@ -3,7 +3,7 @@
 > **Rôle de ce document** : base de connaissances de référence du projet d'assistant agentique.
 > **Dernière mise à jour** : 18 juillet 2026 — **v3**
 > **Statut global** : **Phase 0 terminée** — boucle vocale complète validée sur
-> `jarvis-central` (voir [../serveurs/jarvis-central/etat.md](../serveurs/jarvis-central/etat.md)).
+> `lab-studio` (voir [../serveurs/lab-studio/etat.md](../serveurs/lab-studio/etat.md)).
 > Tour d'inférence `jarvis-core` (RTX 4090) en préparation — voir
 > [inference.md](inference.md).
 
@@ -82,7 +82,7 @@ couches distinctes et complémentaires**, reliées par **MCP**, partageant une
 
 | Élément | Détail | Rôle Jarvis |
 |---|---|---|
-| **`jarvis-central`** (vieux PC gamer) | **RTX 2060 6 Go**, 32 Go RAM, Ryzen 5 | **Cerveau voix/domotique** (HA + Ollama + Whisper + Piper) — front door 24/7 |
+| **`lab-studio`** (vieux PC gamer) | **RTX 2060 6 Go**, 32 Go RAM, Ryzen 5 | **Cerveau voix/domotique** (HA + Ollama + Whisper + Piper) — front door 24/7 |
 | **`jarvis-core`** (tour) | **RTX 4090 24 Go**, 64 Go RAM | **Moteur d'inférence LLM dédié** — en préparation, voir [inference.md](inference.md) |
 | Raspberry Pi 4 8 Go | **= NAS** (git + SMB), actif | Occupé — ne pas réquisitionner (avec SSD Kingston 250 Go en backup) |
 | Raspberry Pi 5 8 Go | libre | **Satellite** ou hôte add-ons vocaux (ReSpeaker XVF3800 prévu) |
@@ -318,9 +318,9 @@ dépassent les 6 Go de VRAM → les 24 Go de `jarvis-core` lèvent ce blocage
    voir [inference.md](inference.md) §6.
 
 > Tranchées depuis la v2 : la **variante du XVF3800** (→ USB Audio, voir
-> [etat.md §2.4](../serveurs/jarvis-central/etat.md)) et **HA en VM vs
+> [etat.md §2.4](../serveurs/lab-studio/etat.md)) et **HA en VM vs
 > conteneur** (→ conteneur Docker, voir
-> [installation.md](../serveurs/jarvis-central/installation.md)).
+> [installation.md](../serveurs/lab-studio/installation.md)).
 
 ---
 

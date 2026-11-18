@@ -1,0 +1,7 @@
+collections: # Collections nécessaires au projet.
+  - name: ansible.posix # Modules Linux, dont mount et authorized_key.
+    version: "2.2.2" # Version fixée.
+  - name: community.docker # Fournit le module de déploiement Compose.
+    version: "5.4.0" # Version fixée.
+  - name: community.general # Fournit notamment le module htpasswd.
+    version: "13.5.1" # Version fixée pour le projet.

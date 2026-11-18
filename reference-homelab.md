@@ -3,6 +3,7 @@
 > Rôle : point d'entrée unique pour comprendre le socle réellement déployé,
 > l'adressage, les communications et les droits du NAS.
 > Date de consolidation : 31 juillet 2026.
+> Mise à jour du réseau et du relais SMB — 15 novembre 2026.
 > Périmètre volontairement exclu : `backlog.md`, archives et pistes
 > d'exploration non validées.
 
@@ -33,22 +34,22 @@ Ubuntu Server 26.04 LTS (headless, SSH)
  └── wyoming-satellite (sur l'hôte, port 10700 — exception justifiée, §2.4)
 ```
 
-Ce socle est celui de `jarvis-central`. Les cinq conteneurs sont gérés par
+Ce socle est celui de `lab-studio`. Les cinq conteneurs sont gérés par
 Docker Compose. Leur source de vérité est
-[`deploiement/jarvis-central/docker-compose.yml`](deploiement/jarvis-central/docker-compose.yml).
+[`deploiement/lab-studio/docker-compose.yml`](deploiement/lab-studio/docker-compose.yml).
 `wyoming-satellite` est la seule brique applicative installée directement sur
 l'hôte ; elle tourne sous systemd avec l'utilisateur `jarvis`.
 
 Les données persistantes sont séparées des conteneurs :
 
-| Donnée | Emplacement sur `jarvis-central` | Nature |
+| Donnée | Emplacement sur `lab-studio` | Nature |
 |---|---|---|
 | Compose déployé | `/srv/jarvis/docker-compose.yml` | Copie de la configuration versionnée |
 | Configuration Home Assistant | `/srv/homeassistant/` | Bind mount critique et persistant |
 | Modèles Whisper | `/srv/wyoming/whisper/` | Bind mount persistant |
 | Modèles Piper | `/srv/wyoming/piper/` | Bind mount persistant |
 | Modèles Ollama | volume Docker `ollama` | Volume externe persistant |
-| Satellite vocal | `/home/jarvis/wyoming-satellite/` | Clone et environnement Python sur l'hôte |
+| Satellite vocal | `/home/studio/wyoming-satellite/` | Clone et environnement Python sur l'hôte |
 | Unité systemd | `/etc/systemd/system/wyoming-satellite.service` | Copie de la configuration versionnée |
 
 ## 2. Réseau et adressage
@@ -58,24 +59,21 @@ Les données persistantes sont séparées des conteneurs :
 ```mermaid
 flowchart TB
     Internet(["Internet"])
-    Box["Box Bouygues<br/>Routeur + DHCP"]
-    LAN["LAN domestique<br/>192.168.1.0/24<br/>Ethernet + Wi-Fi"]
-    Asus["Asus RT-AX86U Pro<br/>Répéteur"]
+    Box["Bbox — 192.168.1.254<br/>Réseau Maison — 192.168.1.0/24"]
+    Pi4["Pi 4 — lab-rpi4-1<br/>wlan0 — 192.168.1.84 (DHCP)<br/>eth0 — 192.168.50.1/24 (fixe)<br/>DHCP, DNS et NAT IPv4"]
+    Switch["TP-Link TL-SG108PE<br/>Réseau Homelab — 192.168.50.0/24"]
 
-    Internet --> Box --> LAN --> Asus
-    Asus --> NAS["nas<br/>192.168.1.80"]
-    Asus --> Central["jarvis-central<br/>192.168.1.57"]
-    Asus --> Core["jarvis-core<br/>192.168.1.187"]
-    Asus --> Admin["pc-admin<br/>IP non documentée"]
-    LAN --> Family["Téléphones et clients Wi-Fi"]
-    LAN -.->|"futurs"| Satellites["Satellites vocaux<br/>IP non attribuées"]
+    Internet --> Box
+    Box -->|"Wi-Fi Maison"| Family["PC d'Océane et téléphones"]
+    Box -->|"Wi-Fi 5 GHz"| Pi4
+    Pi4 -->|"Ethernet"| Switch
+    Switch --> NAS["nas — Pi 5<br/>192.168.50.198"]
+    Switch --> Admin["pc-admin<br/>192.168.50.68"]
 ```
 
 - Aucun port entrant n'est redirigé depuis Internet.
-- Le routeur Asus étend le LAN existant : il ne crée pas de sous-réseau ni de
-  VLAN dans l'état documenté.
-- Les adresses sont fournies par DHCP et ne font pas encore l'objet de
-  réservations confirmées. Elles peuvent donc changer.
+- L'adresse `192.168.50.1` est fixe. Les autres adresses relevées par DHCP
+  peuvent changer.
 - Les configurations machine-à-machine utilisent les IP, pas le mDNS
   (`*.local`). Les humains utilisent les alias définis dans le fichier SSH du
   poste d'administration.
@@ -84,10 +82,11 @@ flowchart TB
 
 | Machine | Rôle | Adresse actuelle | Liaison | État |
 |---|---|---:|---|---|
-| `nas` | Git, persistance et partage SMB | `192.168.1.80` | Ethernet | Déployé ; IP non réservée |
-| `jarvis-central` | Front door 24/7, voix, domotique et petit LLM | `192.168.1.57` | Ethernet | Déployé ; IP non réservée |
-| `jarvis-core` | Future inférence LLM lourde | `192.168.1.187` | Ethernet | Raccordé ; aucun socle/service Jarvis confirmé |
-| `pc-admin` | Administration du parc | Non documentée | Ethernet/portable | À constater |
+| `lab-rpi4-1` | Passerelle Homelab | LAN `192.168.50.1` fixe, WAN `192.168.1.84` observée | Ethernet vers TP-Link, Wi-Fi vers Bbox | Déployé |
+| `nas` | Git, persistance et partage SMB | `192.168.50.198` | Ethernet | Déployé ; IP non réservée |
+| `lab-studio` | Front door 24/7, voix, domotique et petit LLM | `192.168.50.252` | Ethernet | Bail DHCP observé |
+| `jarvis-core` | Future inférence LLM lourde | À confirmer (ancienne IP `192.168.1.187`) | Ethernet | Raccordé ; aucun socle/service Jarvis confirmé |
+| `pc-admin` | Administration du parc | `192.168.50.68` | Ethernet/portable | Bail DHCP observé |
 | Satellites futurs | Interfaces vocales distribuées | Non attribuées | Wi-Fi prévu | Cible |
 
 Il n'existe pas d'adressage IP Docker stable documenté. Les services sont
@@ -98,19 +97,25 @@ conteneurs ne doivent pas être utilisées comme contrat d'architecture.
 
 | Hôte | Point d'accès | Protocole | Service | Exposition réellement configurée | État |
 |---|---|---|---|---|---|
-| `nas` | `192.168.1.80:22` | SSH/TCP | Administration et Git natif | LAN | Déployé |
-| `nas` | `192.168.1.80:445` | SMB/TCP | Partage familial | LAN | Partage `Oceane` confirmé |
-| `jarvis-central` | `192.168.1.57:22` | SSH/TCP | Administration | LAN | Déployé |
-| `jarvis-central` | `http://192.168.1.57:8123` | HTTP/TCP | Home Assistant | LAN via `network_mode: host` | Déployé |
-| `jarvis-central` | `http://192.168.1.57:11434` | HTTP/TCP | API Ollama | Tout le LAN (`0.0.0.0`) | Déployé |
-| `jarvis-central` | `192.168.1.57:10200` | Wyoming/TCP | Piper, synthèse vocale | Tout le LAN (`0.0.0.0`) | Déployé |
-| `jarvis-central` | `192.168.1.57:10300` | Wyoming/TCP | Whisper, transcription | Tout le LAN (`0.0.0.0`) | Déployé |
-| `jarvis-central` | `192.168.1.57:10400` | Wyoming/TCP | openWakeWord | Tout le LAN (`0.0.0.0`) | Déployé |
-| `jarvis-central` | `192.168.1.57:10700` | Wyoming/TCP | Satellite vocal `bureau` | Tout le LAN (`0.0.0.0`) | Déployé |
+| `nas` | `192.168.50.198:22` | SSH/TCP | Administration et Git natif | LAN | Déployé |
+| `nas` | `192.168.50.198:445` | SMB/TCP | Partage familial | LAN | Accès à `antho` confirmé |
+| `lab-rpi4-1` | `192.168.50.1:22` | SSH/TCP | Administration de la passerelle | Depuis le PC admin | Accès avec la clé dédiée confirmé |
+| `lab-rpi4-1` | `192.168.1.84:445` | SMB/TCP via HAProxy | Relais vers `192.168.50.198:445` | IP source `192.168.1.101` et `192.168.1.127` | Écoute confirmée |
+| `lab-studio` | `192.168.50.252:22` | SSH/TCP | Administration | LAN | Déployé |
+| `lab-studio` | `http://192.168.50.252:8123` | HTTP/TCP | Home Assistant | LAN via `network_mode: host` | Déployé |
+| `lab-studio` | `http://192.168.50.252:11434` | HTTP/TCP | API Ollama | Tout le LAN (`0.0.0.0`) | Déployé |
+| `lab-studio` | `192.168.50.252:10200` | Wyoming/TCP | Piper, synthèse vocale | Tout le LAN (`0.0.0.0`) | Déployé |
+| `lab-studio` | `192.168.50.252:10300` | Wyoming/TCP | Whisper, transcription | Tout le LAN (`0.0.0.0`) | Déployé |
+| `lab-studio` | `192.168.50.252:10400` | Wyoming/TCP | openWakeWord | Tout le LAN (`0.0.0.0`) | Déployé |
+| `lab-studio` | `192.168.50.252:10700` | Wyoming/TCP | Satellite vocal `bureau` | Tout le LAN (`0.0.0.0`) | Déployé |
 | `jarvis-core` | `192.168.1.187:22` | SSH/TCP | Administration | Accès prévu depuis `pc-admin` | À confirmer |
-| `jarvis-core` | Port non défini | HTTP/TCP envisagé | API d'inférence lourde | Devra être limitée à `jarvis-central` | Cible |
+| `jarvis-core` | Port non défini | HTTP/TCP envisagé | API d'inférence lourde | Devra être limitée à `lab-studio` | Cible |
 
-Pour les communications internes à `jarvis-central`, les clients utilisent la
+L’accès SSH de la tour a été vérifié à `192.168.50.252` avant le renommage.
+Les ports des applications restent à retester. Pour `jarvis-core`,
+`192.168.1.187` est la dernière adresse relevée sur l’ancien réseau.
+
+Pour les communications internes à `lab-studio`, les clients utilisent la
 boucle locale : `127.0.0.1:11434`, `:10200`, `:10300`, `:10400` et `:10700`.
 Cela n'empêche pas l'écoute sur le LAN : le Compose publie actuellement les
 ports `11434`, `10200`, `10300` et `10400` sans adresse de liaison, tandis que
@@ -125,15 +130,17 @@ pour Ollama/Wyoming n'est documenté.
 
 ```mermaid
 flowchart LR
-    Admin["pc-admin"]
-    Family["PC et téléphones<br/>de la famille"]
+    Admin["pc-admin — 192.168.50.68"]
+    Family["PC et téléphones<br/>réseau Bbox"]
+    Phones["Téléphones autorisés<br/>192.168.1.101 et 192.168.1.127"]
+    Relay["Pi 4 — HAProxy<br/>192.168.1.84:445"]
 
-    subgraph NAS["nas — 192.168.1.80"]
+    subgraph NAS["nas — 192.168.50.198"]
         NasSSH["SSH + Git"]
-        Samba["Partage SMB<br/>Oceane"]
+        Samba["Partages SMB<br/>antho et Oceane"]
     end
 
-    subgraph JC["jarvis-central — 192.168.1.57"]
+    subgraph JC["lab-studio — IP à confirmer"]
         CentralSSH["Administration SSH"]
         Deploy["Clone de déploiement"]
         HA["Home Assistant"]
@@ -145,10 +152,12 @@ flowchart LR
     end
 
     Admin -->|"SSH/TCP 22"| NasSSH
-    Admin -->|"SSH/TCP 22"| CentralSSH
-    Family -->|"SMB/TCP 445 — compte oce"| Samba
-    Family -->|"HTTP/TCP 8123"| HA
-    Deploy -->|"Git sur SSH/TCP 22 — compte jarvisc ?"| NasSSH
+    Admin -->|"SMB/TCP 445 — compte antho"| Samba
+    Admin -.->|"SSH/TCP 22 — IP à confirmer"| CentralSSH
+    Phones -.->|"SMB/TCP 445 — test client à consigner"| Relay
+    Relay -->|"Relais TCP 445"| Samba
+    Family -.->|"HTTP/TCP 8123 — accès à confirmer"| HA
+    Deploy -.->|"Git sur SSH/TCP 22 — accès à confirmer"| NasSSH
 
     HA -->|"HTTP 127.0.0.1:11434"| Ollama
     HA -->|"Wyoming 127.0.0.1:10300"| Whisper
@@ -159,17 +168,28 @@ flowchart LR
 ```
 
 Chaque accès SSH depuis `pc-admin` emploie une clé ed25519 propre à la
-machine cible. Le mot de passe reste accepté en secours sur le NAS et encore
-accepté sur `jarvis-central`. Le compte NAS `jarvisc`, cité pour le clone de
-déploiement, n'a pas de droits documentés. Ollama et Wyoming n'ajoutent aucune
-authentification réseau propre.
+machine cible. Le Pi 4 utilise le compte `lab-1` et la clé Windows
+`id_ed25519_lab1`. Le contrôle depuis WSL reste à faire. Le mot de passe reste
+accepté en secours sur le NAS et encore accepté sur `lab-studio`.
+Le clone de déploiement sur `lab-studio` utilise le compte NAS `agent0`,
+prévu dans Ansible avec une clé dédiée et le groupe `agents`.
+Ollama et Wyoming n'ajoutent aucune authentification réseau propre.
+
+HAProxy filtre les IP source côté Maison. Samba applique les droits des
+comptes `antho` et `oce` sur leurs partages. La configuration active est
+`/etc/haproxy/haproxy.cfg` sur le Pi 4. `~/haproxy-samba.cfg` a servi à la
+mise en service manuelle. La configuration précédente est sauvegardée dans
+`/etc/haproxy/haproxy.cfg.orig`. Pour le tutoriel Ansible, la source sera versionnée
+dans `ansible-apprentissage/files/haproxy-samba.cfg` puis déployée avec une
+validation `haproxy -c` avant remplacement du fichier actif.
+[Adresses d'accès depuis les téléphones](architecture/reseau.md)
 
 ### 3.2 Flux sortants ou non permanents
 
 ```mermaid
 flowchart LR
     NAS["nas"] -.->|"Git sur SSH/TCP 22<br/>miroir à confirmer"| Mirror["Dépôts GitHub privés"]
-    Central["jarvis-central"] -.->|"HTTPS/TCP 443<br/>installation et mises à jour"| Registries["Registres Docker<br/>et dépôts logiciels"]
+    Central["lab-studio"] -.->|"HTTPS/TCP 443<br/>installation et mises à jour"| Registries["Registres Docker<br/>et dépôts logiciels"]
     Central -.->|"HTTPS ou Git/SSH<br/>installation initiale"| WyomingRepo["Dépôt GitHub<br/>wyoming-satellite"]
 ```
 
@@ -185,11 +205,11 @@ contenir aucun secret.
 ```mermaid
 flowchart LR
     Admin["pc-admin"] -.->|"SSH/TCP 22<br/>clé et compte à confirmer"| Core["jarvis-core<br/>inférence lourde"]
-    Central["jarvis-central<br/>front door"] -.->|"HTTP/TCP — port à définir<br/>seul client autorisé"| Core
+    Central["lab-studio<br/>front door"] -.->|"HTTP/TCP — port à définir<br/>seul client autorisé"| Core
     Satellites["Satellites futurs"] -.->|"Wyoming/TCP<br/>ouverture au cas par cas"| Central
 ```
 
-Le sens du calcul lourd est invariant : `jarvis-central` appelle
+Le sens du calcul lourd est invariant : `lab-studio` appelle
 `jarvis-core`; `jarvis-core` n'appelle pas la front door pour lui soumettre du
 travail.
 
@@ -207,13 +227,13 @@ flowchart LR
         Pinas["pinas<br/>Compte Linux administrateur<br/>SSH + sudo"]
         Agents["agents<br/>Groupe Unix"]
         Oce["oce<br/>Compte Linux + Samba<br/>shell nologin"]
-        Jarvisc["jarvisc<br/>Compte mentionné<br/>configuration inconnue"]
+        Agent0["agent0<br/>Compte Git de lab-studio<br/>SSH par clé"]
         Antho["antho<br/>Partage seulement cité"]
     end
 
     subgraph Resources["Ressources du NAS"]
         System["Système NAS"]
-        GitParent["/srv/git<br/>pinas:agents — 2775"]
+        GitParent["/srv/git<br/>pinas:agents — 2750"]
         Repos["Dépôts Git partagés"]
         Mirror["Clé et miroir GitHub"]
         OceShare["/srv/partages/oceane<br/>oce:oce — 0700"]
@@ -223,10 +243,10 @@ flowchart LR
     Pinas -->|"administration complète"| System
     Pinas -->|"propriétaire + rwx"| GitParent
     Pinas -->|"clé privée 600"| Mirror
-    Agents -->|"rwx effectif sur le parent"| GitParent
+    Agents -->|"lecture et traversée du parent"| GitParent
     Agents -->|"lecture + écriture"| Repos
     Oce -->|"SMB lecture + écriture"| OceShare
-    Jarvisc -.->|"droits non documentés"| Repos
+    Agent0 -->|"membre du groupe"| Agents
     Antho -.->|"aucun bloc Samba"| AnthoShare
 ```
 
@@ -238,7 +258,7 @@ identité incomplètement ou contradictoirement documentée.
 
 | Ressource | Propriétaire / groupe | Mode ou règle | Effet réel |
 |---|---|---|---|
-| `/srv/git` | `pinas:agents` | `2775` | `pinas` **et les membres de `agents`** peuvent lister, traverser, créer, renommer et supprimer des entrées ; le bit setgid transmet le groupe `agents` |
+| `/srv/git` | `pinas:agents` | `2750` | `pinas` gère les entrées, `agents` peut les lister et les parcourir. Le bit setgid transmet le groupe `agents`. |
 | `/srv/git/<depot>.git` | Hérité, dépôt partagé | `core.sharedRepository=group` / `--shared=group` | Propriétaire et groupe peuvent travailler dans le dépôt sans conflit de permissions |
 | Dépôts déclarés fiables | Configuration Git système | `safe.directory` par dépôt | Autorise Git à opérer malgré un propriétaire différent ; ce n'est pas un droit Unix supplémentaire |
 | `/home/pinas/.ssh/id_ed25519_github` | `pinas` | Clé privée `600` attendue | Seul `pinas` peut pousser le miroir GitHub |
@@ -259,7 +279,7 @@ Le partage Samba confirmé est :
    directory mask = 0700
 ```
 
-Adresse cliente : `\\192.168.1.80\Oceane`, port TCP `445`, utilisateur
+Adresse cliente : `\\192.168.50.198\Oceane`, port TCP `445`, utilisateur
 `oce`.
 
 ### 4.3 Règles de séparation à conserver
@@ -272,30 +292,27 @@ Adresse cliente : `\\192.168.1.80\Oceane`, port TCP `445`, utilisateur
 4. La clé GitHub du NAS est une Deploy Key limitée à un seul dépôt, sans
    passphrase uniquement parce que le hook est non interactif.
 5. Une paire de clés SSH distincte est utilisée par machine cible depuis
-   `pc-admin` : `id_ed25519_nas`, `id_ed25519_jarvis-central`, puis
+   `pc-admin` : `id_ed25519_nas`, `id_ed25519_jcentral`, puis
    `id_ed25519_jarvis-core` quand ce dernier sera administrable.
 
-### 4.4 Écart de permissions important
+### 4.4 Accès au dossier des dépôts
 
-La documentation existante affirme que seul `pinas` peut créer ou supprimer
-des dépôts sous `/srv/git`. Ce résultat n'est pas garanti par le mode `2775` :
-le groupe `agents` possède lui aussi le droit d'écriture sur le dossier parent,
-ce qui permet à ses membres de créer, renommer ou supprimer ses entrées.
-
-La règle métier « agents : travail dans les dépôts, pas de gestion des dépôts »
-est donc une **intention**, pas une restriction Unix effectivement démontrée
-par les permissions décrites.
+La restauration Pi 5 et le rôle NAS d’apprentissage configurent `/srv/git`
+en `2750`. Le compte `pinas` gère les entrées du dossier parent. Le groupe
+`agents` les voit et les parcourt. L’écriture à l’intérieur de chaque dépôt
+dépend de ses permissions propres et de sa configuration Git.
 
 ## 5. Exposition et limites de sécurité actuelles
 
 | Sujet | État consolidé |
 |---|---|
 | Internet entrant | Aucune redirection de port documentée |
-| Pare-feu `jarvis-central` | UFW non configuré |
+| SMB depuis la Bbox | HAProxy actif avec deux IP source autorisées. Tests SMB sur les téléphones et refus depuis une troisième IP à consigner. |
+| Pare-feu `lab-studio` | UFW non configuré |
 | Ollama | API sans authentification, publiée sur tout le LAN |
 | Wyoming | Ports sans authentification, publiés sur tout le LAN |
 | Home Assistant | Conteneur privilégié et réseau hôte |
-| SSH `jarvis-central` | Clé disponible, mais mot de passe encore accepté |
+| SSH `lab-studio` | Clé disponible, mais mot de passe encore accepté |
 | SSH `nas` | Clé disponible, mot de passe volontairement conservé en secours |
 | Sauvegardes | Aucune sauvegarde opérationnelle confirmée pour HA ou les fichiers SMB |
 | `jarvis-core` | Aucun service Jarvis confirmé ; posture à définir avec son futur socle |
@@ -310,13 +327,12 @@ Ces points proviennent d'incohérences dans les documents existants, pas d'une
 liste de tâches externe :
 
 1. Les réservations DHCP des quatre machines ne sont pas confirmées.
-2. L'adresse de `pc-admin` n'est pas documentée.
-3. Le compte NAS `jarvisc` est cité sans procédure de création, clé SSH,
-   appartenance au groupe `agents` ni périmètre d'accès.
+2. Le bail DHCP de `pc-admin` est `192.168.50.68` au dernier relevé.
+3. Valider l’accès SSH de `lab-studio` sous `agent0` après le déploiement de sa
+   clé publique avec [Ansible](serveurs/lab-studio/renommer.md#créer-laccès-git-de-lab-studio-avec-agent0).
 4. La matrice réseau annonce des partages SMB « Océane et antho », mais seule
    la configuration `[Oceane]` existe dans la documentation d'installation.
-5. L'intention « seuls les administrateurs gèrent les dépôts » contredit le
-   droit d'écriture du groupe `agents` sur `/srv/git` en mode `2775`.
+5. Confirmer le droit d’écriture de `agent0` à l’intérieur des dépôts restaurés.
 6. Le miroir GitHub est décrit dans l'architecture, mais sa procédure porte
    encore la mention « à dérouler » : son activation n'est pas prouvée.
 7. `jarvis-core` possède une IP constatée, mais aucun OS serveur, compte SSH,
@@ -334,14 +350,14 @@ relie :
 - [`architecture/securite.md`](architecture/securite.md) : posture de
   sécurité.
 - [`architecture/inference.md`](architecture/inference.md) : sens du flux
-  entre `jarvis-central` et `jarvis-core`.
+  entre `lab-studio` et `jarvis-core`.
 - [`serveurs/nas/installation.md`](serveurs/nas/installation.md) : comptes,
   permissions Git et Samba.
-- [`serveurs/jarvis-central/etat.md`](serveurs/jarvis-central/etat.md) : état
+- [`serveurs/lab-studio/etat.md`](serveurs/lab-studio/etat.md) : état
   réel du pipeline vocal.
-- [`serveurs/jarvis-central/installation.md`](serveurs/jarvis-central/installation.md) :
+- [`serveurs/lab-studio/installation.md`](serveurs/lab-studio/installation.md) :
   socle système.
 - [`serveurs/pc-admin/installation.md`](serveurs/pc-admin/installation.md) :
   conventions et clés SSH.
-- [`deploiement/jarvis-central/`](deploiement/jarvis-central/) : configuration
-  exécutable déployée sur `jarvis-central`.
+- [`deploiement/lab-studio/`](deploiement/lab-studio/) : configuration
+  exécutable déployée sur `lab-studio`.

@@ -1,0 +1,30 @@
+# Service systemd du satellite vocal (XVF3800 USB sur lab-studio).
+# Déployé dans /etc/systemd/system/ par Ansible.
+# Modifier cette source dans le dépôt, puis rejouer configurer-lab-studio.yml.
+#
+# NB : la carte est adressée par NOM (CARD=Array) et non par numéro — le
+# numéro ALSA est positionnel et peut changer entre boots/résets, le nom
+# vient du driver et reste stable. Vérifiable avec : arecord -l
+# (→ « card N: Array [reSpeaker XVF3800 4-Mic Array] »).
+
+[Unit]
+Description=Wyoming Satellite (bureau) - micro/enceinte XVF3800 vers Home Assistant
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+User=studio
+WorkingDirectory=/home/studio/wyoming-satellite
+ExecStart=/home/studio/wyoming-satellite/script/run \
+  --name 'bureau' \
+  --uri 'tcp://0.0.0.0:10700' \
+  --mic-command 'arecord -D plughw:CARD=Array,DEV=0 -r 16000 -c 1 -f S16_LE -t raw' \
+  --snd-command 'aplay -D plughw:CARD=Array,DEV=0 -r 22050 -c 1 -f S16_LE -t raw' \
+  --wake-uri 'tcp://127.0.0.1:10400' \
+  --wake-word-name 'hey_jarvis'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+lab_studio_nvidia_branch: 595-open # Branche Ubuntu déjà validée avec la RTX 2060.
+lab_studio_satellite_active: false # À passer à true quand le matériel audio est rebranché.
+lab_studio_satellite_version: v1.4.1 # Version à installer si le clone manque sur la tour.
+lab_studio_observability_enabled: false # À activer après préparation du secret Grafana.
+lab_studio_monitoring_images: # Images de supervision amd64 publiées sur le NAS.
+  prometheus: "192.168.50.198:5001/studio/prometheus@sha256:dd4bced05dfaddf23a7ec50f87334993a4149f7fcfbf58456d1c8bafce91cd13"
+  grafana: "192.168.50.198:5001/studio/grafana@sha256:64a6b833bc62e3727f72028106c7a80e0845e01aed7112f099c48b238c1a9841"
+  node-exporter: "192.168.50.198:5001/studio/node-exporter@sha256:da83fae85603c4e47e6c68369a7d746e2dda683dc35ea2e234b4f171e0d92798"
+lab_studio_registry_images: # Images amd64 publiées sous studio/ et référencées par digest.
+  ollama: "192.168.50.198:5001/studio/ollama@sha256:44a722d67f64752ee8d8d1d19d26d83fce0a522af9eab1eafcc6f5c4f61990f0"
+  homeassistant: "192.168.50.198:5001/studio/homeassistant@sha256:21e0d1bae299819d8cf4ef8aa197593205a5fae51c69031c13bfd1eac8c56204"
+  whisper: "192.168.50.198:5001/studio/whisper@sha256:4aa2848f0e8846722c246224fb958e3a6ecf89d10db04a86cbc95480d92b4d34"
+  piper: "192.168.50.198:5001/studio/piper@sha256:659be31324ce981b03a906197e0dfdb519b84e5e4960f746d08ba217c013519f"
+  openwakeword: "192.168.50.198:5001/studio/openwakeword@sha256:271ff3b56c13f400f7ced56b962fbc02de3cf5e5f34dc65d75ca63b4789de166"
+lab_studio_models: # Ollama télécharge seulement ceux qui manquent dans le volume.
+  - qwen3:4b-instruct-2507-q4_K_M
+  - nomic-embed-text:latest

@@ -1,0 +1,5 @@
+- name: Redémarrer Samba # Handler appelé par les tâches du rôle.
+  ansible.builtin.systemd_service:
+    name: smbd # Service Samba.
+    daemon_reload: true # Relit les définitions systemd avant de redémarrer.
+    state: restarted # Redémarre le service lorsque le handler est notifié.

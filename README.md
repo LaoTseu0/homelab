@@ -9,7 +9,7 @@
 
 | Machine          | Matériel                                        | Rôle                                                                                                  |
 | ---------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `jarvis-central` | PC fixe — RTX 2060 6 Go, 32 Go RAM, Ryzen 5     | Pipeline vocal Jarvis (HA + Wyoming + Ollama), « front door » 24/7                                    |
+| `lab-studio` | PC fixe — RTX 2060 6 Go, 32 Go RAM, Ryzen 5     | Pipeline vocal Jarvis (HA + Wyoming + Ollama), « front door » 24/7                                    |
 | `jarvis-core`    | Tour — RTX 4090 24 Go, 64 Go RAM, Ryzen 9 7900x | Moteur d'inférence LLM (en préparation — voir [architecture/inference.md](architecture/inference.md)) |
 | `nas`            | Raspberry Pi 4 — 8 Go                           | Serveur git (doc + mémoire agents) + partage familial SMB                                             |
 | `pc-admin`       | PC portable Asus ROG (PC perso)                 | Administration du homelab en SSH                                                                      |
@@ -25,6 +25,7 @@ Adresses IP et matrice des services : [architecture/reseau.md](architecture/rese
 | [exploration/](exploration/) | Notes de travail, pistes non tranchées, comparatifs | Fourre-tout assumé |
 | [serveurs/](serveurs/) | Un dossier par machine : `installation.md` (comment ça a été monté) et `etat.md` (ce qui tourne aujourd'hui) | Vivant |
 | [deploiement/](deploiement/) | Config **déployable** par machine (compose, services systemd, installeur) — pas de la doc : des fichiers que le serveur exécute | Vivant |
+| [infra/](infra/) | Gestion commune Ansible : inventaire, audit, rôles système et déploiement des Compose existants | Migration en cours |
 | [guides/](guides/) | Savoir-faire réutilisable (debug, procédures) | Enrichi au fil de l'eau |
 | [formation/](formation/) | Parcours AI Engineer adossé au homelab | Vivant |
 | [backlog.md](backlog.md) | Tout ce qui reste à faire, par thème | Vivant |
@@ -34,9 +35,11 @@ Adresses IP et matrice des services : [architecture/reseau.md](architecture/rese
 
 1. Le projet Jarvis, sa démarche et sa stratégie : [architecture/jarvis.md](architecture/jarvis.md)
 2. L'architecture d'inférence à deux machines : [architecture/inference.md](architecture/inference.md)
-3. Ce qui tourne aujourd'hui sur le serveur : [serveurs/jarvis-central/etat.md](serveurs/jarvis-central/etat.md)
+3. Ce qui tourne aujourd'hui sur le serveur : [serveurs/lab-studio/etat.md](serveurs/lab-studio/etat.md)
 4. La posture de sécurité : [architecture/securite.md](architecture/securite.md)
 5. Ce qui reste à faire : [backlog.md](backlog.md)
+6. Administrer et reconstruire le parc : [guides/administrer-homelab.md](guides/administrer-homelab.md)
+   et [architecture/exploitation.md](architecture/exploitation.md) (décision Linux + Ansible + Compose).
 
 ## Convention des documents
 
