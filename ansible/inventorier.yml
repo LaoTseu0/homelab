@@ -1,0 +1,40 @@
+---
+- name: Relever le matériel et le système des hôtes Linux
+  hosts: all
+  gather_facts: true
+  become: false
+
+  tasks:
+    - name: Afficher les caractéristiques relevées par Ansible
+      ansible.builtin.debug:
+        msg:
+          machine: "{{ ansible_facts.hostname }}"
+          systeme: "{{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}"
+          architecture: "{{ ansible_facts.architecture }}"
+          noyau: "{{ ansible_facts.kernel }}"
+          modele: "{{ ansible_facts.product_name | default('à relever') }}"
+          firmware: "{{ ansible_facts.bios_version | default('à relever') }}"
+          ram_visible_mio: "{{ ansible_facts.memtotal_mb }}"
+
+    - name: Interroger le système et les composants avec les utilitaires présents
+      ansible.builtin.command:
+        argv: "{{ item }}"
+      loop:
+        - [lscpu]
+        - [lsblk, -o, 'NAME,SIZE,MODEL,TRAN,FSTYPE,MOUNTPOINTS']
+        - [ip, -brief, address]
+        - [lspci, -nnk]
+        - [lsusb]
+        - [cat, /proc/device-tree/model]
+        - [nvidia-smi, '--query-gpu=name,memory.total,driver_version', '--format=csv']
+      register: inventaire_commandes
+      changed_when: false
+      failed_when: false # Un utilitaire ou un composant peut manquer sur une machine.
+      check_mode: false # Les commandes interrogent le système en mode check aussi.
+
+    - name: Afficher les résultats des relevés disponibles
+      ansible.builtin.debug:
+        msg: "{{ item.stdout_lines | default([]) }}"
+      loop: "{{ inventaire_commandes.results | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0) | list }}"
+      loop_control:
+        label: "{{ item.item | first }}"

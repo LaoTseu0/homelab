@@ -2,12 +2,11 @@
   hosts: lab-studio
   become: true
   vars:
-    homelab_repo_root: "{{ playbook_dir }}/.."
     docker_enabled: true
     jarvis_migration_ready: true # Les montages de l’installation actuelle sont contrôlés avant Compose.
     jarvis_enabled_observability: "{{ lab_studio_observability_enabled }}"
     jarvis_observability_exporter_enabled: false # La supervision de la machine s’active séparément.
-    homelab_secrets_dir: "{{ homelab_repo_root }}/infra/secrets/{{ inventory_hostname }}"
+    homelab_secrets_dir: "{{ playbook_dir }}/secrets/{{ inventory_hostname }}"
     jarvis_preserve_data_permissions: true # Conserver les permissions des données déjà sur la tour.
     jarvis_exporter_build: false
     jarvis_models: "{{ lab_studio_models }}"
@@ -27,7 +26,8 @@
 
     - name: Préparer Docker avec le rôle commun
       ansible.builtin.import_role:
-        name: "{{ playbook_dir }}/../infra/roles/docker"
+        name: docker
+        tasks_from: standard
       tags: [socle]
 
     - name: Préparer la prise en charge du GPU
@@ -209,7 +209,7 @@
 
     - name: Appliquer le Compose et gérer l’unité du satellite
       ansible.builtin.import_role:
-        name: "{{ playbook_dir }}/../infra/roles/jarvis"
+        name: lab-studio
 
     - name: Vérifier la collecte et l’interface de supervision
       when: lab_studio_observability_enabled | bool and not ansible_check_mode

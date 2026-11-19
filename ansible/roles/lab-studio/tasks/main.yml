@@ -44,7 +44,7 @@
 
 - name: Déployer le Compose vocal existant, source unique
   ansible.builtin.copy:
-    src: "{{ homelab_repo_root }}/deploiement/lab-studio/docker-compose.yml"
+    src: docker-compose.yml
     dest: /srv/jarvis/docker-compose.yml
     mode: '0644'
     backup: true
@@ -66,7 +66,7 @@
 
 - name: Déployer la configuration d'observabilité existante
   ansible.builtin.copy:
-    src: "{{ homelab_repo_root }}/deploiement/lab-studio/{{ item }}"
+    src: "{{ item }}"
     dest: "/srv/jarvis/{{ item }}"
     mode: preserve
   loop:
@@ -197,7 +197,7 @@
 
 - name: Déployer l'unité systemd existante du satellite
   ansible.builtin.copy:
-    src: "{{ homelab_repo_root }}/deploiement/lab-studio/wyoming-satellite.service"
+    src: wyoming-satellite.service
     dest: /etc/systemd/system/wyoming-satellite.service
     mode: '0644'
     backup: true
