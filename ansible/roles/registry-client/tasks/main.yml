@@ -30,6 +30,4 @@
     password: "{{ hostvars['nas'].registry_reader_password }}"
   become: true
   no_log: true
-  when:
-    - registry_client_login | default(false) | bool
-    - not ansible_check_mode
+  when: not ansible_check_mode

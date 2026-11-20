@@ -24,7 +24,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 |---|---|
 | Carte et architecture | Raspberry Pi 5, ARM64. Révision, RAM réelle et version EEPROM à relever |
 | Démarrage | microSD `/dev/mmcblk0` de 119,1 Gio visibles. `mmcblk0p1` monte `/boot/firmware`, `mmcblk0p2` porte la racine ext4 |
-| Stockage de données | Crucial P310 `CT1000P310SSD8`, 1 To nominal, 931,5 Gio visibles. Une partition GPT en ext4 montée sur `/srv` |
+| Stockage de données | Crucial P310 `CT1000P310SSD8`, 1 To nominal, 931,5 Gio visibles. Une partition GPT en ext4 montée sur `/srv`. Montage et contenu dans [Volumes](volumes.md) |
 | Contrôleur de stockage | HAT PCIe/NVMe Seeed Studio. Modèle exact, réglages PCIe et liaison négociée à relever |
 | Châssis et alimentation | Boîtier, refroidissement, bloc d’alimentation et modèle microSD à relever |
 | Système | Raspberry Pi OS 64 bits, base Debian Trixie. Version du noyau à relever |
@@ -47,7 +47,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 | Système | Ubuntu 26.04, x86-64. Noyau `7.0.0-42-generic` observé au rétablissement d’Ollama |
 | GPU | NVIDIA GeForce RTX 2060 Rev. A, TU106, ID PCI `10de:1f08`, 6 144 Mio. Pilote `595.99.02` et branche Ubuntu `595-open` validés le 18 novembre |
 | Périphérique audio | ReSpeaker XVF3800 en USB, actuellement débranché. L’unité `wyoming-satellite` est gérée par Ansible |
-| Services | Home Assistant, Ollama, Whisper, Piper et openWakeWord. Prometheus, Grafana et Node Exporter validés avec le profil de supervision |
+| Services | Home Assistant, Ollama, Whisper, Piper et openWakeWord |
 | À relever | Modèle CPU exact, RAM et références des modules, carte mère, BIOS, stockage, contrôleur Ethernet, alimentation, boîtier, refroidissement et versions Docker/Compose |
 
 ## Seconde tour — `jarvis-core`

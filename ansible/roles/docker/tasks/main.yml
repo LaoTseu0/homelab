@@ -123,7 +123,6 @@
     owner: root # Compte propriétaire de la sauvegarde.
     group: root # Groupe propriétaire.
     mode: '0600' # Réserve la lecture et l’écriture à root.
-  when: docker_rpi_memory_cgroups | default(false) | bool # Réglage activé pour ce Pi.
 
 - name: Activer les contrôleurs mémoire au démarrage du Raspberry Pi
   ansible.builtin.replace:
@@ -135,7 +134,6 @@
     - cgroup_enable=memory # Demande l’activation du contrôleur mémoire.
     - cgroup_memory=1 # Complète l’activation pour Raspberry Pi OS.
   register: rpi_cgroups_boot # Enregistre notamment si une des itérations a modifié le fichier.
-  when: docker_rpi_memory_cgroups | default(false) | bool # Applique cette tâche aux hôtes qui activent le réglage.
 
 - name: Redémarrer le NAS après modification des paramètres de démarrage
   ansible.builtin.reboot:

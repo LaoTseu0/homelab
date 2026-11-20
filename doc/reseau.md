@@ -32,10 +32,8 @@ Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côt
 | `lab-studio` | 8123/TCP | Interface Home Assistant. Accès depuis le PC admin via `http://192.168.50.252:8123` |
 | `lab-studio` | 11434/TCP | API Ollama, publiée par Compose |
 | `lab-studio` | 10200, 10300, 10400/TCP | Piper, Whisper et openWakeWord, publiés par Compose |
-| `lab-studio` | 3000/TCP | Grafana depuis le PC admin via `http://192.168.50.252:3000` |
-| `lab-studio` | 9090/TCP | Prometheus, lié à `127.0.0.1`. Il collecte Node Exporter sur le réseau Compose interne |
 
-Ce tableau décrit les flux configurés et les accès confirmés. Les ports publiés par Compose ne prouvent pas la présence de restrictions par IP. Le satellite audio est actuellement à l’arrêt. [Compose de la tour](../ansible/roles/lab-studio/files/docker-compose.yml) · [Compose de supervision](../ansible/roles/lab-studio/files/docker-compose.observability.yml)
+Ce tableau décrit les flux configurés et les accès confirmés. Les ports publiés par Compose ne prouvent pas la présence de restrictions par IP. Le satellite audio est actuellement à l’arrêt. [Compose de la tour](../ansible/roles/lab-studio/files/docker-compose.yml)
 
 ### Accès Samba via le relais
 

@@ -32,7 +32,6 @@ services: # Applications du projet Compose.
         read_only: true # Le conteneur lit les comptes.
         bind:
           create_host_path: false
-{% if registry_reader_password is defined %}
   registry-reader: # Le service de téléchargement utilise les mêmes images sur le NVMe.
     image: "{{ registry_image }}"
     restart: unless-stopped
@@ -72,4 +71,3 @@ services: # Applications du projet Compose.
         read_only: true
         bind:
           create_host_path: false
-{% endif %}

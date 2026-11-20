@@ -46,10 +46,6 @@ flowchart LR
     ha -->|"Wyoming · synthèse vocale"| piper["Piper"]
     ha -->|"Wyoming · détection du mot d’activation"| wake["openWakeWord"]
     ha -->|"API d’inférence"| ollama["Ollama"]
-
-    grafana["Grafana"] -->|"Requêtes de métriques"| prometheus["Prometheus"]
-    prometheus -->|"Collecte périodique"| exporter["Node Exporter"]
-    exporter -->|"Lecture du système"| host["Hôte Linux"]
 ```
 
 Les flèches indiquent quel composant initie chaque échange. Le schéma vocal décrit la chaîne de services. Le satellite est à l’arrêt, et la chaîne complète reste à retester après son rebranchement.

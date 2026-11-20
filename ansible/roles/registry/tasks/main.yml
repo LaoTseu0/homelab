@@ -38,7 +38,6 @@
   no_log: true # Masque les paramètres et le résultat sensibles dans la sortie Ansible.
 
 - name: Préparer l’accès de lecture du registry
-  when: registry_reader_password is defined # Active ce point d’accès une fois son mot de passe ajouté à Vault.
   block:
     - name: Préparer le dossier des comptes de lecture
       ansible.builtin.file:
@@ -59,16 +58,6 @@
         mode: '0600'
         state: present
       no_log: true
-
-    - name: Retirer l’ancien compte de téléchargement après validation de la bascule
-      community.general.htpasswd:
-        path: /srv/registry/reader-auth/htpasswd
-        name: jarvis-central
-        owner: root
-        group: root
-        mode: '0600'
-        state: absent
-      when: registry_remove_legacy_reader | default(false) | bool
 
     - name: Relever l’empreinte du fichier des comptes de lecture
       ansible.builtin.stat:
@@ -180,7 +169,7 @@
     state: present # Crée ou actualise les conteneurs nécessaires.
     pull: missing # Télécharge l’image fixée si elle manque localement.
     build: never # Utilise l’image publiée.
-    remove_orphans: true # Retire le service de lecture du projet si son accès est désactivé.
+    remove_orphans: true # Retire tout service qui n’est plus déclaré dans le Compose.
     wait: true # Attend le démarrage des services.
     wait_timeout: 60 # Délai maximal d’attente en secondes.
 
@@ -218,7 +207,6 @@
   until: registry_reader_ready.status == 401
   retries: 10
   delay: 3
-  when: registry_reader_password is defined
 
 - name: Vérifier les droits du compte de téléchargement
   ansible.builtin.uri:
@@ -239,4 +227,3 @@
   retries: 5
   delay: 2
   no_log: true
-  when: registry_reader_password is defined

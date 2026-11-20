@@ -54,7 +54,7 @@ Cette configuration te permettrait d'apprendre énormément en réseau et cybers
 
 ## Point de départ dans l’infrastructure actuelle
 
-Le dépôt décrit une administration depuis le PC Windows, avec Ansible exécuté dans Ubuntu sous WSL. Ansible configure les hôtes Linux par SSH et déploie les services Docker Compose. Le NAS Pi 5 héberge des dépôts Git et un registry privé avec des accès distincts pour la publication et le téléchargement des images. La tour `lab-studio` exécute les applications et dispose d’une supervision Prometheus/Grafana.
+Le dépôt décrit une administration depuis le PC Windows, avec Ansible exécuté dans Ubuntu sous WSL. Ansible configure les hôtes Linux par SSH et déploie les services Docker Compose. Le NAS Pi 5 héberge des dépôts Git et un registry privé avec des accès distincts pour la publication et le téléchargement des images. La tour `lab-studio` exécute les applications.
 
 La [procédure de publication](exploitation.md#publier-une-version-dimage) prévoit déjà de publier une image, de relever son digest, de mettre à jour les variables Ansible puis de redéployer. Le digest identifie précisément le contenu de l’image. C’est une bonne base pour automatiser les livraisons et retrouver une version précédente.
 
@@ -62,7 +62,7 @@ Cette section décrit une évolution possible à partir des fichiers du dépôt,
 
 ## Exemple : mettre à jour une application personnelle
 
-Pour une application dont le code est maîtrisé, comme le composant `jarvis-exporter` présent dans le dépôt, le parcours cible pourrait être :
+Pour une application dont le code est maîtrisé, le parcours cible pourrait être :
 
 ```text
 Modification du code et push d’une branche
@@ -81,17 +81,17 @@ Validation de la version en environnement de test
                     ↓
 Déclenchement manuel du déploiement sur lab-studio
                     ↓
-Contrôles applicatifs et observation des métriques
+Contrôles applicatifs
 ```
 
 1. **Vérifier le changement (CI).** Exécuter les tests de l’application, vérifier la configuration Compose et, si les fichiers d’infrastructure changent, la syntaxe Ansible. Un échec bloque la suite. Les tests d’une branche ne doivent pas disposer des secrets de déploiement.
 2. **Construire et publier.** Après fusion, construire une image identifiée par le commit, la publier sur le NAS et conserver son digest. Cibler `linux/amd64` pour la tour ; une application destinée au Pi nécessiterait une image compatible avec son architecture. Les outils du runner doivent être sélectionnés par `mise`, comme pour le développement local.
-3. **Enregistrer la version à livrer.** Mettre à jour la variable d’image correspondante dans le dépôt d’infrastructure avec le digest publié. Le composant `jarvis-exporter`, actuellement déclaré avec une construction locale dans Compose, devrait évoluer vers cette image publiée. Tester puis déployer la même image, sans la reconstruire entre les environnements.
+3. **Enregistrer la version à livrer.** Mettre à jour la variable d’image correspondante dans le dépôt d’infrastructure avec le digest publié. Tester puis déployer la même image, sans la reconstruire entre les environnements.
 4. **Déployer avec Ansible et Compose.** Après validation, le runner lance le déploiement de l’application concernée. Il faut prévoir une tâche ou un playbook adapté à ce périmètre pour éviter d’exécuter toute la configuration de la tour à chaque livraison. Un seul déploiement doit pouvoir modifier une cible à la fois.
-5. **Vérifier le résultat.** Attendre les contrôles de santé et tester une fonction réelle de l’application. Prometheus/Grafana complètent ces contrôles ; ils ne remplacent pas les tests. Conserver les journaux du pipeline et l’association entre commit, digest et cible déployée.
+5. **Vérifier le résultat.** Attendre les contrôles de santé et tester une fonction réelle de l’application. Conserver les journaux du pipeline et l’association entre commit, digest et cible déployée.
 6. **Prévoir le retour arrière.** Conserver l’ancien digest et sa configuration pour pouvoir les redéployer. Les volumes persistants restent à gérer séparément : une migration de base de données peut nécessiter une procédure spécifique et une sauvegarde restaurable.
 
-Pour un logiciel tiers comme Grafana, il n’est généralement pas nécessaire de reconstruire le logiciel : le pipeline peut vérifier une version amont, la recopier dans le registry privé puis valider son déploiement.
+Pour un logiciel tiers comme Home Assistant, il n’est généralement pas nécessaire de reconstruire le logiciel : le pipeline peut vérifier une version amont, la recopier dans le registry privé puis valider son déploiement.
 
 ## Où exécuter le pipeline ?
 
@@ -118,12 +118,12 @@ Kubernetes et GitOps sont des options d’architecture. Une entreprise peut éga
 | Code et changements | Git sur le NAS ; configuration dans ce dépôt | Branches, historique et vérifications avant fusion | Revues de code, branches protégées, responsabilités définies |
 | Déclenchement | Commandes lancées depuis WSL | CI sur les changements Git ; déploiement manuel après validation | Déclencheurs et validations adaptés au risque, avec historique |
 | Exécution | PC admin comme nœud de contrôle Ansible | Runner Linux avec outils fixés par `mise` | Runners isolés, reproductibles, entretenus et dimensionnés pour les équipes |
-| Tests | Tests présents pour `jarvis-exporter` ; pas d’exécution CI identifiée | Tests automatiques et validation des configurations | Tests unitaires, d’intégration et fonctionnels ; contrôles de sécurité selon le contexte |
+| Tests | Pas de tests automatisés ni d’exécution CI identifiés | Tests automatiques et validation des configurations | Tests unitaires, d’intégration et fonctionnels ; contrôles de sécurité selon le contexte |
 | Images | Registry privé ; procédure de publication et références par digest | Construction automatisée et lien commit → digest → déploiement | Artefacts conservés, contrôlés et promus entre environnements |
 | Environnements | Pas de recette séparée identifiée | Instance de test avec ports, volumes et données distincts | Séparation des environnements, des données et des accès ; recette représentative |
 | Déploiement | Playbooks Ansible et Compose | Déploiement ciblé, sérialisé, avec contrôles applicatifs | Automatisation contrôlée ; stratégies limitant les interruptions selon les exigences |
 | Secrets et accès | SSH, sudo, Ansible Vault et comptes du registry | Secrets fournis au runner et droits distincts par étape | Identités dédiées, moindre privilège, rotation et audit des accès |
-| Exploitation | Prometheus/Grafana ; retour au digest précédent documenté | Résultat du déploiement, métriques et retour arrière testé | Alertes, suivi des incidents, objectifs de disponibilité et procédures de reprise |
+| Exploitation | Pas de supervision ; retour au digest précédent documenté | Résultat du déploiement, métriques et retour arrière testé | Alertes, suivi des incidents, objectifs de disponibilité et procédures de reprise |
 | Sauvegardes | Procédure actuelle et test de restauration encore à définir | Sauvegarder Git, registry et données ; tester la restauration | Rétention et restauration validées selon les pertes et délais acceptables |
 | Infrastructure | Ansible pour les hôtes et Compose pour les services | Pipelines adaptés aux fichiers modifiés | Terraform si pertinent pour les ressources ; Ansible pour la configuration ; moteur de déploiement adapté |
 

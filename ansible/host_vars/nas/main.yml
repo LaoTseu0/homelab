@@ -17,7 +17,6 @@ nas_smb_users: # Comptes Linux associés aux partages Samba.
     share: antho # Nom affiché aux clients SMB, utilisé dans \\nas\antho.
 docker_apt_suite: trixie # Version Debian dont proviendront les paquets Docker.
 docker_apt_arch: arm64 # Architecture des paquets pour le Raspberry Pi 5.
-docker_rpi_memory_cgroups: true # Active ce réglage propre au Raspberry Pi pour cet hôte.
 registry_image: "registry:3.1.2@sha256:82f6ff4a7f982960c8aa51617fea3aabc485df6e55cce80d22deb1de36f1bc3c" # Image officielle fixée par son digest, avec une variante ARM64.
 registry_lan_ip: "192.168.50.198" # Adresse du NAS sur le réseau Homelab, utilisée par le certificat et l’écoute HTTPS.
 registry_reader_user: lab-studio # Identifiant Docker de la tour sur le port de lecture (5001).
