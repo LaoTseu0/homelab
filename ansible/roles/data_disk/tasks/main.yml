@@ -1,0 +1,31 @@
+# Rôle data_disk : monte un disque de données et empêche les services qui en dépendent de démarrer sans lui.
+
+- name: Monter le disque de données # Rend le contenu du disque accessible et l'inscrit dans /etc/fstab.
+  ansible.posix.mount: # Module qui gère à la fois le montage actif et sa ligne dans /etc/fstab.
+    src: "UUID={{ data_disk_uuid }}" # Désigne le système de fichiers par son UUID, stable quel que soit l'ordre de détection.
+    path: "{{ data_disk_mount_point }}" # Dossier dans lequel le contenu du disque devient accessible.
+    fstype: "{{ data_disk_fstype }}" # Type du système de fichiers.
+    opts: "{{ data_disk_mount_options }}" # Options de montage inscrites dans /etc/fstab.
+    dump: "0" # Désactive l'ancien mécanisme de sauvegarde dump pour cette entrée.
+    passno: "2" # Vérifie ce système de fichiers au démarrage, après la racine.
+    backup: true # Sauvegarde /etc/fstab avant toute modification.
+    state: mounted # Exige un montage actif et une entrée persistante.
+
+- name: Préparer les dossiers de compléments systemd # Un dossier <service>.service.d par service qui dépend du disque.
+  ansible.builtin.file: # Module qui gère fichiers, dossiers et permissions.
+    path: "/etc/systemd/system/{{ item }}.service.d" # Emplacement où systemd cherche les compléments d'un service.
+    state: directory # Le chemin doit être un dossier.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Root modifie, les autres peuvent parcourir.
+  loop: "{{ data_disk_dependent_services }}" # Une itération par service déclaré.
+
+- name: Lier chaque service au montage du disque # Le service refuse de démarrer si le disque attendu n'est pas monté.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle Jinja2.
+    src: data-disk.conf.j2 # Modèle situé dans templates/ du rôle.
+    dest: "/etc/systemd/system/{{ item }}.service.d/data-disk.conf" # Complément propre au service de l'itération.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par systemd.
+  loop: "{{ data_disk_dependent_services }}" # Une itération par service déclaré.
+  notify: Recharger systemd # Programme le handler si un complément est créé ou modifié.

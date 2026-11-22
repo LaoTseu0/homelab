@@ -1,0 +1,79 @@
+# Rôle home_assistant : Home Assistant et sa chaîne vocale Wyoming (Whisper, Piper, openWakeWord) avec Docker Compose.
+
+- name: Vérifier que chaque service a une image fixée par digest # Garantit qu'un redéploiement installe exactement les mêmes images.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: # Conditions à respecter.
+      - item in home_assistant_images # Le service a une image déclarée.
+      - home_assistant_images[item] is match('^[^@ ]+@sha256:[a-f0-9]{64}$') # Référence de la forme nom@sha256:<digest>.
+    fail_msg: "home_assistant_images.{{ item }} doit être de la forme nom@sha256:<digest>." # Message propre au service.
+  loop: "{{ home_assistant_services }}" # Une itération par service.
+
+- name: Lister les conteneurs existants # Permet de contrôler les conteneurs déjà présents.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, container, ls, --all, --format, '{{ "{{.Names}}" }}'] # Un nom de conteneur par ligne.
+  register: home_assistant_existing_containers # Sortie de la commande.
+  check_mode: false # Lecture exécutée aussi en simulation.
+  changed_when: false # Cette lecture ne modifie rien.
+
+- name: Lire la configuration des conteneurs existants # Projet Compose et dossiers montés.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, container, inspect, "{{ item }}"] # Renvoie la configuration complète en JSON.
+  loop: "{{ home_assistant_services }}" # Une itération par service.
+  register: home_assistant_current # Une sortie par service.
+  when: item in home_assistant_existing_containers.stdout_lines # Seulement si le conteneur existe.
+  check_mode: false # Lecture exécutée aussi en simulation.
+  changed_when: false # Cette lecture ne modifie rien.
+
+- name: Vérifier que les conteneurs existants correspondent à ce rôle # Évite de remplacer un conteneur d'un autre projet ou de changer de dossier de données.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: # Conditions à respecter.
+      - (container.Config.Labels or {}).get('com.docker.compose.project', '') == home_assistant_project # Le conteneur appartient au même projet Compose.
+      - item.item not in home_assistant_expected_mounts or expected.source in (container.Mounts | selectattr('Destination', 'equalto', expected.target) | map(attribute='Source') | list) # Il monte le même dossier de données.
+    fail_msg: "Le conteneur {{ item.item }} existe hors du projet {{ home_assistant_project }} ou avec un autre dossier de données. Arrêter l'ancien projet (voir migrations/) avant de redéployer." # Message propre au conteneur.
+  vars: # Variables propres à cette tâche.
+    container: "{{ (item.stdout | from_json)[0] }}" # Premier et seul objet renvoyé par docker inspect.
+    expected: "{{ home_assistant_expected_mounts[item.item] | default({}) }}" # Montage attendu, s'il y en a un.
+  loop: "{{ home_assistant_current.results }}" # Une itération par service.
+  loop_control: # Réglages de la boucle.
+    label: "{{ item.item }}" # Affiche seulement le nom du service.
+  when: item is not skipped # Seulement pour les conteneurs existants.
+
+- name: Préparer les dossiers de données # Les permissions existantes sont conservées : les conteneurs y écrivent avec leurs propres comptes.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "{{ item }}" # Dossier traité pendant cette itération.
+    state: directory # Le chemin doit être un dossier ; il est créé s'il manque.
+  loop: # Dossiers de données.
+    - "{{ home_assistant_config_dir }}" # Configuration de Home Assistant.
+    - "{{ home_assistant_whisper_data_dir }}" # Modèles de Whisper.
+    - "{{ home_assistant_piper_data_dir }}" # Voix de Piper.
+
+- name: Préparer le dossier du projet Compose # Contient compose.yml et ses sauvegardes.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "{{ home_assistant_compose_dir }}" # Dossier du projet.
+    state: directory # Le chemin doit être un dossier.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Root modifie, les autres peuvent parcourir.
+
+- name: Déployer la définition Compose # Générée à partir du modèle du rôle.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
+    src: compose.yml.j2 # Modèle situé dans templates/ du rôle.
+    dest: "{{ home_assistant_compose_dir }}/compose.yml" # Définition lue par Docker Compose.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par tous.
+    backup: true # Conserve l'ancienne version du fichier.
+    validate: /usr/bin/docker compose -f %s config --quiet # Refuse un fichier que Compose ne saurait pas lire.
+  register: home_assistant_compose_file # Mémorise si le fichier a changé.
+
+- name: Démarrer le projet Compose et attendre les conteneurs # Crée ou met à jour les conteneurs.
+  community.docker.docker_compose_v2: # Module équivalent à « docker compose up -d ».
+    project_src: "{{ home_assistant_compose_dir }}" # Dossier qui contient compose.yml.
+    project_name: "{{ home_assistant_project }}" # Nom stable du projet.
+    state: present # Les services doivent tourner.
+    pull: missing # Télécharge une image seulement si elle manque.
+    build: never # Utilise les images publiées.
+    wait: true # Attend que les conteneurs soient démarrés.
+    wait_timeout: 180 # Délai maximal en secondes.
+    remove_orphans: false # Ne retire aucun conteneur non déclaré.
+  when: not ansible_check_mode or not home_assistant_compose_file.changed # En simulation, Compose lirait l'ancien fichier.

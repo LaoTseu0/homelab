@@ -1,5 +1,7 @@
-haproxy_nas_address: "192.168.50.198"
-haproxy_listen_address: "192.168.1.84"
-haproxy_allowed_sources:
-  - "192.168.1.101/32"
-  - "192.168.1.127/32"
+# Variables du Pi 4 passerelle (lab-1).
+
+haproxy_listen_address: "192.168.1.84" # Adresse du Pi 4 côté réseau Maison, sur laquelle le relais SMB écoute.
+haproxy_backend_address: "{{ nas_address }}" # Le relais transmet les connexions au NAS.
+haproxy_allowed_sources: # Seules ces adresses du réseau Maison peuvent utiliser le relais.
+  - "192.168.1.101/32" # Premier téléphone autorisé.
+  - "192.168.1.127/32" # Second téléphone autorisé.

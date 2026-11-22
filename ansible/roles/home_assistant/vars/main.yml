@@ -1,0 +1,8 @@
+# Constantes internes du rôle home_assistant : à ne pas redéfinir dans l'inventaire.
+# vars/ a une priorité plus haute que host_vars, contrairement à defaults/.
+
+home_assistant_services: [homeassistant, whisper, piper, openwakeword] # Services et conteneurs du projet, dans l'ordre du Compose.
+home_assistant_expected_mounts: # Dossier de l'hôte attendu dans chaque conteneur qui garde des données.
+  homeassistant: { target: /config, source: "{{ home_assistant_config_dir }}" } # Configuration de Home Assistant.
+  whisper: { target: /data, source: "{{ home_assistant_whisper_data_dir }}" } # Modèles de Whisper.
+  piper: { target: /data, source: "{{ home_assistant_piper_data_dir }}" } # Voix de Piper.

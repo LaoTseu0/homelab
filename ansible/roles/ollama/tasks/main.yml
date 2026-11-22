@@ -1,0 +1,99 @@
+# Rôle ollama : moteur LLM sur GPU, déployé avec Docker Compose, et ses modèles.
+
+- name: Vérifier que l'image est fixée par digest # Garantit qu'un redéploiement installe exactement la même image.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: ollama_image is match('^[^@ ]+@sha256:[a-f0-9]{64}$') # Référence de la forme nom@sha256:<64 caractères hexadécimaux>.
+    fail_msg: "ollama_image doit être de la forme nom@sha256:<digest>." # Message affiché en cas d'échec.
+
+- name: Lire les runtimes connus de Docker # Le conteneur réserve le GPU avec le runtime nvidia.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, info, --format, '{{ "{{json .Runtimes}}" }}'] # Le format Go est protégé pour qu'Ansible ne l'interprète pas.
+  register: ollama_docker_runtimes # Liste des runtimes au format JSON.
+  check_mode: false # Lecture exécutée aussi en simulation.
+  changed_when: false # Cette lecture ne modifie rien.
+
+- name: Exiger le runtime NVIDIA # Sans lui, le conteneur démarrerait sans GPU ou échouerait.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: "'nvidia' in (ollama_docker_runtimes.stdout | from_json)" # Le runtime doit être déclaré dans Docker.
+    fail_msg: Appliquer le rôle nvidia_gpu avant le rôle ollama. # Message affiché en cas d'échec.
+
+- name: Lister les conteneurs existants # Permet de contrôler un conteneur ollama déjà présent.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, container, ls, --all, --format, '{{ "{{.Names}}" }}'] # Un nom de conteneur par ligne.
+  register: ollama_existing_containers # Sortie de la commande.
+  check_mode: false # Lecture exécutée aussi en simulation.
+  changed_when: false # Cette lecture ne modifie rien.
+
+- name: Lire la configuration du conteneur existant # Projet Compose et volumes montés.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, container, inspect, ollama] # Renvoie la configuration complète en JSON.
+  register: ollama_current # Sortie de la commande.
+  when: "'ollama' in ollama_existing_containers.stdout_lines" # Seulement si le conteneur existe.
+  check_mode: false # Lecture exécutée aussi en simulation.
+  changed_when: false # Cette lecture ne modifie rien.
+
+- name: Vérifier que le conteneur existant correspond à ce rôle # Évite de remplacer un conteneur d'un autre projet ou de perdre l'accès aux modèles.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: # Conditions à respecter.
+      - (ollama_container.Config.Labels or {}).get('com.docker.compose.project', '') == ollama_project # Le conteneur appartient au même projet Compose.
+      - ollama_volume in (ollama_container.Mounts | selectattr('Destination', 'equalto', '/root/.ollama') | map(attribute='Name') | list) # Il utilise le même volume de modèles.
+    fail_msg: "Le conteneur ollama existe hors du projet {{ ollama_project }} ou avec un autre volume. Arrêter l'ancien projet (voir migrations/) avant de redéployer." # Message affiché en cas d'échec.
+  vars: # Variables propres à cette tâche.
+    ollama_container: "{{ (ollama_current.stdout | from_json)[0] }}" # Premier et seul objet renvoyé par docker inspect.
+  when: ollama_current is not skipped # Seulement si le conteneur existe.
+
+- name: Préparer le dossier du projet Compose # Contient compose.yml et ses sauvegardes.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "{{ ollama_compose_dir }}" # Dossier du projet.
+    state: directory # Le chemin doit être un dossier.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Root modifie, les autres peuvent parcourir.
+
+- name: Déployer la définition Compose # Générée à partir du modèle du rôle.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
+    src: compose.yml.j2 # Modèle situé dans templates/ du rôle.
+    dest: "{{ ollama_compose_dir }}/compose.yml" # Définition lue par Docker Compose.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par tous.
+    backup: true # Conserve l'ancienne version du fichier.
+    validate: /usr/bin/docker compose -f %s config --quiet # Refuse un fichier que Compose ne saurait pas lire.
+  register: ollama_compose_file # Mémorise si le fichier a changé.
+
+- name: Garantir l'existence du volume des modèles # Le Compose le déclare comme externe : il doit exister avant.
+  community.docker.docker_volume: # Module qui gère les volumes Docker.
+    name: "{{ ollama_volume }}" # Nom du volume.
+    state: present # Le volume doit exister ; un volume existant est conservé tel quel.
+
+- name: Démarrer le projet Compose et attendre le conteneur # Crée ou met à jour le conteneur.
+  community.docker.docker_compose_v2: # Module équivalent à « docker compose up -d ».
+    project_src: "{{ ollama_compose_dir }}" # Dossier qui contient compose.yml.
+    project_name: "{{ ollama_project }}" # Nom stable du projet.
+    state: present # Le service doit tourner.
+    pull: missing # Télécharge l'image seulement si elle manque.
+    build: never # Utilise l'image publiée.
+    wait: true # Attend que le conteneur soit démarré.
+    wait_timeout: 180 # Délai maximal en secondes.
+    remove_orphans: false # Ne retire aucun conteneur non déclaré.
+  when: not ansible_check_mode or not ollama_compose_file.changed # En simulation, Compose lirait l'ancien fichier.
+
+- name: Lister les modèles déjà installés # Évite de retélécharger un modèle présent.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, exec, ollama, ollama, list] # Commande exécutée dans le conteneur.
+  register: ollama_installed_models # Tableau texte des modèles.
+  changed_when: false # Cette lecture ne modifie rien.
+  retries: 10 # Nombre de nouvelles tentatives.
+  delay: 3 # Secondes entre deux tentatives.
+  until: ollama_installed_models.rc == 0 # Réessaie le temps que le serveur Ollama réponde.
+  when: ollama_models | length > 0 and not ansible_check_mode # Inutile sans modèle déclaré.
+
+- name: Télécharger uniquement les modèles absents # Un modèle peut peser plusieurs gigaoctets.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [docker, exec, ollama, ollama, pull, "{{ item }}"] # Téléchargement dans le volume des modèles.
+  vars: # Variables propres à cette tâche.
+    ollama_model_tagged: "{{ item if ':' in item.rsplit('/', 1)[-1] else item ~ ':latest' }}" # Ajoute :latest si le nom n'a pas d'étiquette, comme Ollama.
+  loop: "{{ ollama_models }}" # Une itération par modèle déclaré.
+  when: # Toutes les conditions doivent être vraies.
+    - not ansible_check_mode # Un téléchargement ne se simule pas.
+    - ollama_model_tagged not in (ollama_installed_models.stdout_lines[1:] | map('split') | map('first') | list) # Le modèle n'est pas dans la liste (en-tête ignoré).

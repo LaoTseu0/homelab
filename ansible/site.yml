@@ -1,0 +1,12 @@
+# Point d'entrée global : applique tous les profils, machine par machine.
+# Lancement : ansible-playbook -i inventory.yml site.yml --ask-become-pass --ask-vault-pass
+# Le mot de passe sudo demandé est le même pour toutes les machines ; sinon, lancer chaque profil séparément.
+
+- name: Configurer le NAS # Doit passer en premier : le registry sert les images de lab-studio.
+  ansible.builtin.import_playbook: configurer-nas.yml # Inclut le profil du NAS.
+
+- name: Configurer la passerelle # Relais SMB du réseau Maison.
+  ansible.builtin.import_playbook: configurer-passerelle.yml # Inclut le profil du Pi 4.
+
+- name: Configurer lab-studio # Tour GPU.
+  ansible.builtin.import_playbook: configurer-lab-studio.yml # Inclut le profil de la tour.

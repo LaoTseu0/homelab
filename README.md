@@ -11,4 +11,4 @@ Le homelab s’administre depuis le PC Windows. Ubuntu sous WSL exécute Ansible
 | Les dossiers de données, le montage du NVMe et leur gestion | [Volumes](doc/volumes.md) |
 | Les commandes de déploiement, les accès et la remise en service | [Exploitation](doc/exploitation.md) |
 
-La configuration déployable se trouve dans [`ansible/`](ansible/). L’[inventaire](ansible/inventory.yml) indique les cibles SSH, [`host_vars/`](ansible/host_vars/) contient leurs variables, et [`roles/`](ansible/roles/) rassemble les tâches et les fichiers qu’elles déploient. Les fichiers Compose de la tour se trouvent dans le [rôle lab-studio](ansible/roles/lab-studio/).
+La configuration déployable se trouve dans [`ansible/`](ansible/). L’[inventaire](ansible/inventory.yml) indique les cibles SSH, [`group_vars/`](ansible/group_vars/) et [`host_vars/`](ansible/host_vars/) contiennent leurs variables. [`roles/`](ansible/roles/) rassemble des rôles réutilisables, un par fonction (Samba, Docker, Ollama…), et chaque playbook `configurer-*.yml` est le profil d’une machine : la liste des rôles qu’elle reçoit.

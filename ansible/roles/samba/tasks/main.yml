@@ -1,0 +1,60 @@
+# Rôle samba : serveur de fichiers SMB avec un partage personnel par compte.
+
+- name: Installer Samba # Serveur de fichiers SMB.
+  ansible.builtin.apt: # Module qui gère les paquets APT.
+    name: samba # Paquet du serveur.
+    state: present # Installe le paquet s'il manque.
+    update_cache: true # Actualise la liste des paquets si elle est trop ancienne.
+    cache_valid_time: 3600 # Considère la liste comme récente pendant une heure.
+
+- name: Créer le groupe de chaque compte # Groupe principal portant le même nom que le compte.
+  ansible.builtin.group: # Module qui gère les groupes Linux.
+    name: "{{ item.name }}" # Nom du groupe.
+    gid: "{{ item.gid }}" # Identifiant numérique conservé après réinstallation.
+    state: present # Le groupe doit exister.
+  loop: "{{ samba_users }}" # Une itération par compte.
+
+- name: Créer les comptes Linux des partages # Samba s'appuie sur des comptes Linux existants.
+  ansible.builtin.user: # Module qui gère les comptes Linux.
+    name: "{{ item.name }}" # Nom du compte.
+    uid: "{{ item.uid }}" # Identifiant numérique propriétaire des fichiers.
+    group: "{{ item.name }}" # Groupe principal créé par la tâche précédente.
+    shell: /usr/sbin/nologin # Compte réservé au partage de fichiers, sans connexion shell.
+    create_home: false # Le partage sert d'espace de stockage, pas de dossier personnel.
+    state: present # Le compte doit exister.
+  loop: "{{ samba_users }}" # Une itération par compte.
+
+- name: Préparer le dossier parent des partages # Contient un dossier par compte.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "{{ samba_shares_root }}" # Dossier parent.
+    state: directory # Le chemin doit être un dossier.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Root modifie, les autres peuvent parcourir.
+
+- name: Préparer les espaces personnels # Un dossier privé par compte.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "{{ samba_shares_root }}/{{ item.directory }}" # Dossier du compte.
+    state: directory # Le chemin doit être un dossier.
+    owner: "{{ item.name }}" # Le compte en est propriétaire.
+    group: "{{ item.name }}" # Groupe du compte.
+    mode: '0700' # Accès réservé au propriétaire.
+  loop: "{{ samba_users }}" # Une itération par compte.
+
+- name: Générer la configuration Samba # Déclare un partage par compte.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
+    src: smb.conf.j2 # Modèle situé dans templates/ du rôle.
+    dest: /etc/samba/smb.conf # Configuration lue par Samba.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par tous, modifiable par root.
+    backup: true # Conserve l'ancienne version du fichier.
+    validate: /usr/bin/testparm -s %s # Refuse un fichier que Samba ne saurait pas lire.
+  notify: Redémarrer Samba # Programme le handler si la configuration change.
+
+- name: Activer et démarrer Samba # Le service démarre aussi au boot.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: smbd # Service Samba.
+    daemon_reload: true # Prend en compte les compléments systemd ajoutés par d'autres rôles (ex. data_disk).
+    enabled: true # Active le démarrage au boot.
+    state: started # Démarre le service s'il est arrêté.

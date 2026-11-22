@@ -1,0 +1,9 @@
+# Géré par Ansible (rôle data_disk) : modifier le rôle ou ses variables, pas ce fichier.
+# Le service attend le montage, vérifie qu'il s'agit bien d'un point de montage,
+# puis contrôle l'UUID du disque monté avant chaque démarrage.
+[Unit]
+RequiresMountsFor={{ data_disk_mount_point }}
+AssertPathIsMountPoint={{ data_disk_mount_point }}
+
+[Service]
+ExecStartPre=/usr/bin/findmnt --noheadings --mountpoint {{ data_disk_mount_point }} --source UUID={{ data_disk_uuid }}

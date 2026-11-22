@@ -1,73 +1,70 @@
-services: # Applications du projet Compose.
-  registry: # Nom du service.
-    image: "{{ registry_image }}" # Référence définie dans les variables du NAS.
-    restart: unless-stopped # Redémarre le conteneur après une panne ou un redémarrage de Docker.
-    ports:
-      - "{{ registry_lan_ip }}:5000:5000" # Publie le port sur l’adresse Homelab du NAS.
-    environment:
+# Géré par Ansible (rôle registry) : modifier le rôle ou ses variables, pas ce fichier.
+services: # Conteneurs du projet Compose.
+  registry: # Service de publication, en lecture et écriture.
+    image: "{{ registry_image }}" # Image fixée par digest dans les variables de l'hôte.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    ports: # Ports publiés sur l'hôte.
+      - "{{ registry_lan_ip }}:{{ registry_push_port }}:5000" # Publié seulement sur l'adresse Homelab.
+    environment: # Réglages de Distribution.
       REGISTRY_LOG_LEVEL: info # Niveau de détail des journaux.
-      OTEL_TRACES_EXPORTER: none # Désactive l’envoi de traces vers un collecteur externe.
+      OTEL_TRACES_EXPORTER: none # Désactive l'envoi de traces vers un collecteur.
       REGISTRY_HTTP_TLS_CERTIFICATE: /tls/registry.crt # Certificat présenté aux clients.
-      REGISTRY_HTTP_TLS_KEY: /tls/registry.key # Clé privée utilisée par le serveur.
-      REGISTRY_AUTH: htpasswd # Active l’authentification par mot de passe.
-      REGISTRY_AUTH_HTPASSWD_REALM: Homelab Registry # Nom annoncé aux clients lors de l’authentification.
-      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd # Fichier des comptes et de leurs hashes.
-    labels:
-      homelab.registry.auth-checksum: "{{ registry_auth_file.stat.checksum | default('pending') }}" # Compose recrée le conteneur si le fichier des comptes change.
-    volumes:
-      - type: bind # Relie directement un dossier du NAS au conteneur.
-        source: /srv/appdata/registry # Images stockées sur le NVMe.
-        target: /var/lib/registry # Chemin de stockage utilisé dans le conteneur.
-        bind:
-          create_host_path: false # Exige que le dossier source ait été préparé.
-      - type: bind
-        source: /srv/registry/tls # Clé et certificat préparés par Ansible sur le NVMe.
-        target: /tls # Chemin utilisé par les paramètres TLS du conteneur.
-        read_only: true # Le conteneur lit les certificats.
-        bind:
-          create_host_path: false
-      - type: bind
-        source: /srv/registry/auth # Fichier htpasswd préparé à partir de Vault.
-        target: /auth # Chemin utilisé par la configuration d’authentification.
-        read_only: true # Le conteneur lit les comptes.
-        bind:
-          create_host_path: false
-  registry-reader: # Le service de téléchargement utilise les mêmes images sur le NVMe.
-    image: "{{ registry_image }}"
-    restart: unless-stopped
-    ports:
-      - "{{ registry_lan_ip }}:5001:5000" # Les clients téléchargent les images sur le port 5001.
-    environment:
-      REGISTRY_LOG_LEVEL: info
-      OTEL_TRACES_EXPORTER: none
-      REGISTRY_HTTP_TLS_CERTIFICATE: /tls/registry.crt
-      REGISTRY_HTTP_TLS_KEY: /tls/registry.key
-      REGISTRY_AUTH: htpasswd
-      REGISTRY_AUTH_HTPASSWD_REALM: Homelab Registry Pull
-      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-      REGISTRY_STORAGE_MAINTENANCE: | # Distribution 3.1.2 attend ces réglages dans un seul bloc YAML.
-        readonly:
-          enabled: true
-        uploadpurging:
-          enabled: false
-    labels:
-      homelab.registry.auth-checksum: "{{ registry_reader_auth_file.stat.checksum | default('pending') }}"
-    volumes:
-      - type: bind
-        source: /srv/appdata/registry
-        target: /var/lib/registry
-        read_only: true # Docker interdit aussi l’écriture dans le dossier des images.
-        bind:
-          create_host_path: false
-      - type: bind
-        source: /srv/registry/tls
-        target: /tls
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: /srv/registry/reader-auth
-        target: /auth
-        read_only: true
-        bind:
-          create_host_path: false
+      REGISTRY_HTTP_TLS_KEY: /tls/registry.key # Clé privée du serveur.
+      REGISTRY_AUTH: htpasswd # Authentification par fichier de comptes.
+      REGISTRY_AUTH_HTPASSWD_REALM: Homelab Registry # Nom annoncé aux clients.
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd # Fichier des comptes de publication.
+    labels: # Étiquettes du conteneur.
+      homelab.registry.auth-checksum: "{{ registry_auth_files.results[0].stat.checksum | default('pending') }}" # Change avec les comptes et force la recréation.
+    volumes: # Dossiers de l'hôte montés dans le conteneur.
+      - type: bind # Montage direct d'un dossier de l'hôte.
+        source: "{{ registry_data_dir }}" # Images stockées sur l'hôte.
+        target: /var/lib/registry # Emplacement attendu par Distribution.
+        bind: # Options du montage.
+          create_host_path: false # Exige que le dossier ait été préparé par Ansible.
+      - type: bind # Montage direct d'un dossier de l'hôte.
+        source: "{{ registry_root }}/tls" # Clé et certificat.
+        target: /tls # Chemin utilisé par les réglages TLS.
+        read_only: true # Le conteneur ne fait que lire.
+        bind: # Options du montage.
+          create_host_path: false # Exige que le dossier ait été préparé par Ansible.
+      - type: bind # Montage direct d'un dossier de l'hôte.
+        source: "{{ registry_root }}/auth" # Comptes de publication.
+        target: /auth # Chemin utilisé par l'authentification.
+        read_only: true # Le conteneur ne fait que lire.
+        bind: # Options du montage.
+          create_host_path: false # Exige que le dossier ait été préparé par Ansible.
+  registry-reader: # Service de téléchargement, en lecture seule, sur le même stockage.
+    image: "{{ registry_image }}" # Même image que le service de publication.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    ports: # Ports publiés sur l'hôte.
+      - "{{ registry_lan_ip }}:{{ registry_pull_port }}:5000" # Les clients téléchargent sur ce port.
+    environment: # Réglages de Distribution.
+      REGISTRY_LOG_LEVEL: info # Niveau de détail des journaux.
+      OTEL_TRACES_EXPORTER: none # Désactive l'envoi de traces vers un collecteur.
+      REGISTRY_HTTP_TLS_CERTIFICATE: /tls/registry.crt # Certificat présenté aux clients.
+      REGISTRY_HTTP_TLS_KEY: /tls/registry.key # Clé privée du serveur.
+      REGISTRY_AUTH: htpasswd # Authentification par fichier de comptes.
+      REGISTRY_AUTH_HTPASSWD_REALM: Homelab Registry Pull # Nom annoncé aux clients.
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd # Fichier des comptes de lecture.
+      REGISTRY_STORAGE_MAINTENANCE: "readonly:\n  enabled: true\nuploadpurging:\n  enabled: false\n" # Bloc YAML attendu par Distribution 3.1.2 : lecture seule, sans purge.
+    labels: # Étiquettes du conteneur.
+      homelab.registry.auth-checksum: "{{ registry_auth_files.results[1].stat.checksum | default('pending') }}" # Change avec les comptes et force la recréation.
+    volumes: # Dossiers de l'hôte montés dans le conteneur.
+      - type: bind # Montage direct d'un dossier de l'hôte.
+        source: "{{ registry_data_dir }}" # Images stockées sur l'hôte.
+        target: /var/lib/registry # Emplacement attendu par Distribution.
+        read_only: true # Docker interdit aussi l'écriture dans le dossier des images.
+        bind: # Options du montage.
+          create_host_path: false # Exige que le dossier ait été préparé par Ansible.
+      - type: bind # Montage direct d'un dossier de l'hôte.
+        source: "{{ registry_root }}/tls" # Clé et certificat.
+        target: /tls # Chemin utilisé par les réglages TLS.
+        read_only: true # Le conteneur ne fait que lire.
+        bind: # Options du montage.
+          create_host_path: false # Exige que le dossier ait été préparé par Ansible.
+      - type: bind # Montage direct d'un dossier de l'hôte.
+        source: "{{ registry_root }}/reader-auth" # Comptes de lecture.
+        target: /auth # Chemin utilisé par l'authentification.
+        read_only: true # Le conteneur ne fait que lire.
+        bind: # Options du montage.
+          create_host_path: false # Exige que le dossier ait été préparé par Ansible.

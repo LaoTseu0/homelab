@@ -1,7 +1,9 @@
-collections: # Collections nécessaires au projet.
+# Collections Ansible nécessaires au projet, installées avec « ansible-galaxy collection install -r requirements.yml ».
+
+collections: # Liste des collections.
   - name: ansible.posix # Modules Linux, dont mount et authorized_key.
     version: "2.2.2" # Version fixée.
-  - name: community.docker # Fournit le module de déploiement Compose.
+  - name: community.docker # Modules Docker, dont docker_compose_v2, docker_login et docker_volume.
     version: "5.4.0" # Version fixée.
-  - name: community.general # Fournit notamment le module htpasswd.
-    version: "13.5.1" # Version fixée pour le projet.
+  - name: community.general # Modules divers, dont htpasswd.
+    version: "13.5.1" # Version fixée.

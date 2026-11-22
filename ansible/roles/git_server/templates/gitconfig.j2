@@ -1,0 +1,6 @@
+# Géré par Ansible (rôle git_server) : dépôts que ce compte peut utiliser
+# bien qu'ils appartiennent à un autre compte.
+[safe]
+{% for repo in git_server_repositories %}
+    directory = {{ git_server_root }}/{{ repo }}
+{% endfor %}

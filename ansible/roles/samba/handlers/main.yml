@@ -1,0 +1,6 @@
+# Handlers du rôle samba : exécutés une seule fois en fin de play, seulement s'ils ont été notifiés.
+
+- name: Redémarrer Samba # Nom appelé par « notify » dans les tâches du rôle.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: smbd # Service Samba.
+    state: restarted # Redémarre le service pour charger la nouvelle configuration.

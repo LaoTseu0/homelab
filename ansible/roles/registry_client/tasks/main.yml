@@ -1,0 +1,32 @@
+# Rôle registry_client : permet au Docker de l'hôte de télécharger les images du registry privé.
+
+- name: Lire le certificat public sur le serveur du registry # Le certificat est autosigné : il faut le copier chez chaque client.
+  ansible.builtin.slurp: # Module qui lit un fichier distant et le renvoie encodé en base64.
+    src: "{{ registry_client_ca_path }}" # Certificat public publié par le rôle registry.
+  delegate_to: "{{ registry_client_server_host }}" # Exécute cette tâche sur le serveur, pas sur le client.
+  become: false # Le compte SSH du serveur suffit pour lire ce fichier public.
+  register: registry_client_certificate # Contenu du certificat.
+
+- name: Créer le dossier de confiance Docker pour ce registry # Docker y cherche le certificat propre à chaque registry.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "/etc/docker/certs.d/{{ registry_client_endpoint }}" # Dossier nommé d'après l'adresse et le port.
+    state: directory # Le chemin doit être un dossier.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0755' # Lisible par Docker.
+
+- name: Installer le certificat du registry dans Docker # Docker fait alors confiance à ce registry en HTTPS.
+  ansible.builtin.copy: # Module qui écrit un contenu dans un fichier.
+    content: "{{ registry_client_certificate.content | b64decode }}" # Certificat décodé.
+    dest: "/etc/docker/certs.d/{{ registry_client_endpoint }}/ca.crt" # Nom attendu par Docker.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par Docker.
+
+- name: Enregistrer le compte de lecture dans Docker # Les téléchargements suivants s'authentifient automatiquement.
+  community.docker.docker_login: # Module équivalent à « docker login ».
+    registry_url: "{{ registry_client_endpoint }}" # Registry concerné.
+    username: "{{ registry_client_user }}" # Compte de lecture.
+    password: "{{ registry_client_password }}" # Mot de passe déchiffré par Vault.
+  no_log: true # Masque le mot de passe dans la sortie d'Ansible.
+  when: not ansible_check_mode # Ce module ne sait pas simuler.

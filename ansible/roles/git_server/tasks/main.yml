@@ -1,0 +1,81 @@
+# Rôle git_server : sert des dépôts Git bare par SSH à des comptes techniques limités à git-shell.
+
+- name: Installer Git # Fournit les commandes serveur appelées par les clients SSH.
+  ansible.builtin.apt: # Module qui gère les paquets APT.
+    name: git # Paquet Git.
+    state: present # Installe le paquet s'il manque.
+    update_cache: true # Actualise la liste des paquets si elle est trop ancienne.
+    cache_valid_time: 3600 # Considère la liste comme récente pendant une heure.
+
+- name: Créer le groupe d'accès aux dépôts # Ses membres peuvent lire les dépôts.
+  ansible.builtin.group: # Module qui gère les groupes Linux.
+    name: "{{ git_server_group }}" # Nom du groupe.
+    gid: "{{ git_server_group_gid | default(omit, true) }}" # Identifiant fixé s'il est renseigné, sinon choisi par le système.
+    state: present # Le groupe doit exister.
+
+- name: Ajouter le propriétaire des dépôts au groupe # Lui permet d'administrer les dépôts avec les mêmes droits.
+  ansible.builtin.user: # Module qui gère les comptes Linux.
+    name: "{{ git_server_owner }}" # Compte existant.
+    groups: "{{ git_server_group }}" # Groupe supplémentaire.
+    append: true # Conserve ses autres groupes, dont sudo.
+
+- name: Préparer le dossier des dépôts # Les dépôts eux-mêmes sont restaurés ou créés à la main.
+  ansible.builtin.file: # Module qui gère fichiers et dossiers.
+    path: "{{ git_server_root }}" # Dossier des dépôts.
+    state: directory # Le chemin doit être un dossier.
+    owner: "{{ git_server_owner }}" # Compte propriétaire.
+    group: "{{ git_server_group }}" # Groupe d'accès.
+    mode: '2750' # Lecture pour le groupe ; le bit setgid fait hériter le groupe aux nouveaux fichiers.
+
+- name: Vérifier le format des clés publiques des agents # Évite d'autoriser un fichier vide ou une clé d'un autre type.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: lookup('ansible.builtin.file', item.public_key_file) is match('^ssh-ed25519 [A-Za-z0-9+/]+={0,2}( [^\r\n]*)?$') # Une seule clé Ed25519.
+    fail_msg: "{{ item.public_key_file }} doit contenir une seule clé publique SSH Ed25519." # Message propre à l'agent.
+  loop: "{{ git_server_agents }}" # Une itération par agent.
+  loop_control: # Réglages de la boucle.
+    label: "{{ item.name }}" # Affiche seulement le nom de l'agent.
+
+- name: Créer les comptes des agents # Comptes limités aux commandes Git.
+  ansible.builtin.user: # Module qui gère les comptes Linux.
+    name: "{{ item.name }}" # Nom du compte.
+    group: "{{ git_server_group }}" # Git accède aux dépôts avec les droits de ce groupe.
+    home: "/home/{{ item.name }}" # Contient la clé autorisée et la configuration Git du compte.
+    create_home: true # Crée ce dossier s'il manque.
+    shell: /usr/bin/git-shell # N'autorise que les commandes serveur de Git.
+    password_lock: true # Connexion par clé SSH uniquement.
+    state: present # Le compte doit exister.
+  loop: "{{ git_server_agents }}" # Une itération par agent.
+  loop_control: # Réglages de la boucle.
+    label: "{{ item.name }}" # Affiche seulement le nom de l'agent.
+
+- name: Déclarer les dépôts sûrs pour chaque agent # Git refuse sinon les dépôts qui appartiennent à un autre compte.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
+    src: gitconfig.j2 # Modèle situé dans templates/ du rôle.
+    dest: "/home/{{ item.name }}/.gitconfig" # Configuration Git personnelle de l'agent.
+    owner: "{{ item.name }}" # L'agent en est propriétaire.
+    group: "{{ git_server_group }}" # Groupe d'accès.
+    mode: '0600' # Lisible par l'agent seul.
+  loop: "{{ git_server_agents }}" # Une itération par agent.
+  loop_control: # Réglages de la boucle.
+    label: "{{ item.name }}" # Affiche seulement le nom de l'agent.
+  when: not ansible_check_mode # En simulation, le compte et son dossier peuvent ne pas exister.
+
+- name: Vérifier que chaque agent peut lire chaque dépôt # Teste les droits réels avant d'ouvrir l'accès SSH.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [runuser, -u, "{{ item.0.name }}", --, git, ls-remote, "{{ git_server_root }}/{{ item.1 }}"] # Liste les références du dépôt en tant qu'agent.
+  loop: "{{ git_server_agents | product(git_server_repositories) | list }}" # Toutes les paires (agent, dépôt).
+  loop_control: # Réglages de la boucle.
+    label: "{{ item.0.name }} → {{ item.1 }}" # Affiche la paire testée.
+  changed_when: false # Ce contrôle ne modifie rien.
+  when: not ansible_check_mode # En simulation, le compte peut ne pas exister.
+
+- name: Autoriser la clé SSH de chaque agent # Ouvre l'accès Git par SSH.
+  ansible.posix.authorized_key: # Module qui gère le fichier ~/.ssh/authorized_keys.
+    user: "{{ item.name }}" # Compte de l'agent.
+    key: "{{ lookup('ansible.builtin.file', item.public_key_file) }}" # Clé lue sur le control node.
+    key_options: restrict # Interdit notamment les redirections SSH et le terminal.
+    state: present # La clé doit être autorisée.
+  loop: "{{ git_server_agents }}" # Une itération par agent.
+  loop_control: # Réglages de la boucle.
+    label: "{{ item.name }}" # Affiche seulement le nom de l'agent.
+  when: not ansible_check_mode # En simulation, le compte peut ne pas exister.

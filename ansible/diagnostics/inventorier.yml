@@ -1,0 +1,42 @@
+# Diagnostic en lecture seule : relève le matériel et le système de chaque hôte joignable.
+# Lancement depuis ansible/ : ansible-playbook -i inventory.yml diagnostics/inventorier.yml --ask-vault-pass
+
+- name: Relever le matériel et le système des hôtes Linux # Description du play.
+  hosts: all # Toutes les machines de l'inventaire.
+  gather_facts: true # Les facts fournissent l'essentiel des informations affichées.
+  become: false # Aucune commande n'a besoin de sudo.
+
+  tasks: # Tâches du play.
+    - name: Afficher les caractéristiques relevées par Ansible # Résumé issu des facts.
+      ansible.builtin.debug: # Module qui affiche une valeur.
+        msg: # Dictionnaire affiché tel quel.
+          machine: "{{ ansible_facts.hostname }}" # Nom système.
+          systeme: "{{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}" # Distribution et version.
+          architecture: "{{ ansible_facts.architecture }}" # Architecture du processeur.
+          noyau: "{{ ansible_facts.kernel }}" # Version du noyau.
+          modele: "{{ ansible_facts.product_name | default('à relever') }}" # Modèle annoncé par le firmware.
+          firmware: "{{ ansible_facts.bios_version | default('à relever') }}" # Version du firmware.
+          ram_visible_mio: "{{ ansible_facts.memtotal_mb }}" # Mémoire visible par le système.
+
+    - name: Interroger le système avec les utilitaires présents # Complète les facts.
+      ansible.builtin.command: # Module qui exécute une commande sans shell.
+        argv: "{{ item }}" # Commande de l'itération.
+      loop: # Commandes lancées ; certaines peuvent manquer selon la machine.
+        - [lscpu] # Processeur.
+        - [lsblk, -o, 'NAME,SIZE,MODEL,TRAN,FSTYPE,MOUNTPOINTS'] # Disques et partitions.
+        - [ip, -brief, address] # Interfaces réseau et adresses.
+        - [lspci, -nnk] # Composants PCI et pilotes.
+        - [lsusb] # Périphériques USB.
+        - [cat, /proc/device-tree/model] # Modèle exact d'un Raspberry Pi.
+        - [nvidia-smi, '--query-gpu=name,memory.total,driver_version', '--format=csv'] # GPU NVIDIA.
+      register: inventaire_commandes # Résultats de toutes les commandes.
+      changed_when: false # Ces lectures ne modifient rien.
+      failed_when: false # Un utilitaire ou un composant peut manquer.
+      check_mode: false # Lectures exécutées aussi en simulation.
+
+    - name: Afficher les résultats des relevés disponibles # Seulement les commandes qui ont réussi.
+      ansible.builtin.debug: # Module qui affiche une valeur.
+        msg: "{{ item.stdout_lines | default([]) }}" # Sortie de la commande, ligne par ligne.
+      loop: "{{ inventaire_commandes.results | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0) | list }}" # Commandes terminées avec succès.
+      loop_control: # Réglages de la boucle.
+        label: "{{ item.item | first }}" # Affiche seulement le nom de la commande.

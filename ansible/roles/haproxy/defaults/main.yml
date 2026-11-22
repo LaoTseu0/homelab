@@ -1,0 +1,7 @@
+# Interface du rôle haproxy : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variables obligatoires, sans valeur par défaut :
+#   haproxy_listen_address  : adresse locale sur laquelle le relais écoute (côté réseau Maison).
+#   haproxy_backend_address : adresse du serveur vers lequel les connexions sont relayées.
+#   haproxy_allowed_sources : liste des réseaux ou adresses autorisés (notation CIDR).
+
+haproxy_port: 445 # Port TCP relayé, identique côté écoute et côté serveur ; 445 = SMB.

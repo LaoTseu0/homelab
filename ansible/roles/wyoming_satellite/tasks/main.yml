@@ -1,0 +1,57 @@
+# Rôle wyoming_satellite : relie un micro et un haut-parleur USB à Home Assistant avec le protocole Wyoming.
+
+- name: Vérifier que le satellite appartient au compte SSH # Les tâches du clone s'exécutent sans sudo, donc avec ce compte.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: wyoming_satellite_user == ansible_user # Les deux comptes doivent être identiques.
+    fail_msg: wyoming_satellite_user doit être le compte utilisé par Ansible pour se connecter. # Message affiché en cas d'échec.
+
+- name: Installer les dépendances système du satellite # Outils audio, Git et environnements Python.
+  ansible.builtin.apt: # Module qui gère les paquets APT.
+    name: [alsa-utils, git, python3-venv] # arecord/aplay, clonage, environnement virtuel.
+    state: present # Installe les paquets manquants.
+
+- name: Vérifier la présence du clone # Un clone existant n'est jamais remplacé.
+  ansible.builtin.stat: # Module qui lit les propriétés d'un fichier.
+    path: "{{ wyoming_satellite_dir }}/script/run" # Script de lancement du satellite.
+  register: wyoming_satellite_source # Mémorise si le clone existe.
+
+- name: Cloner le satellite s'il manque # Installe la version déclarée.
+  ansible.builtin.git: # Module qui clone un dépôt Git.
+    repo: https://github.com/rhasspy/wyoming-satellite.git # Dépôt officiel.
+    dest: "{{ wyoming_satellite_dir }}" # Dossier du clone.
+    version: "{{ wyoming_satellite_version }}" # Étiquette Git installée.
+  become: false # Le clone appartient au compte SSH, pas à root.
+  when: not wyoming_satellite_source.stat.exists # Seulement si le clone manque.
+
+- name: Vérifier l'environnement Python du satellite # Teste l'import du paquet dans l'environnement virtuel.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: ["{{ wyoming_satellite_dir }}/.venv/bin/python", -c, import wyoming_satellite] # Échoue si l'environnement est absent ou incomplet.
+  become: false # Exécuté avec le compte propriétaire du clone.
+  register: wyoming_satellite_python # Code retour de la commande.
+  check_mode: false # Lecture exécutée aussi en simulation.
+  changed_when: false # Cette lecture ne modifie rien.
+  failed_when: false # Un échec est traité par la tâche suivante.
+
+- name: Préparer l'environnement Python si nécessaire # Installe les dépendances du satellite.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: ["{{ wyoming_satellite_dir }}/script/setup"] # Script d'installation fourni par le projet.
+    chdir: "{{ wyoming_satellite_dir }}" # Le script s'exécute depuis le dossier du clone.
+  become: false # Exécuté avec le compte propriétaire du clone.
+  when: wyoming_satellite_python.rc != 0 and not ansible_check_mode # Seulement si l'environnement est absent ou incomplet.
+
+- name: Déployer l'unité systemd du satellite # Décrit comment lancer le satellite et avec quels périphériques.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
+    src: wyoming-satellite.service.j2 # Modèle situé dans templates/ du rôle.
+    dest: /etc/systemd/system/wyoming-satellite.service # Emplacement des unités ajoutées par l'administrateur.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par systemd.
+    backup: true # Conserve l'ancienne version du fichier.
+  register: wyoming_satellite_unit # Mémorise si l'unité a changé.
+
+- name: Appliquer l'état voulu du satellite # Démarré si actif, arrêté sinon ; redémarré si son unité a changé.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: wyoming-satellite # Service concerné.
+    daemon_reload: "{{ wyoming_satellite_unit.changed }}" # Relit l'unité seulement si elle a changé.
+    enabled: "{{ wyoming_satellite_active | bool }}" # Démarrage au boot seulement si le satellite est actif.
+    state: "{{ ('restarted' if wyoming_satellite_unit.changed else 'started') if (wyoming_satellite_active | bool) else 'stopped' }}" # État calculé.

@@ -1,0 +1,20 @@
+# Géré par Ansible (rôle ollama) : modifier le rôle ou ses variables, pas ce fichier.
+services: # Conteneurs du projet Compose.
+  ollama: # Moteur LLM, partagé entre Home Assistant et les futurs agents.
+    image: "{{ ollama_image }}" # Image fixée par digest dans les variables de l'hôte.
+    container_name: ollama # Nom fixe, utilisé par les commandes « docker exec » du rôle.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    ports: # Ports publiés sur l'hôte.
+      - "{{ ollama_port }}:11434" # API HTTP d'Ollama.
+    volumes: # Données persistantes.
+      - "{{ ollama_volume }}:/root/.ollama" # Modèles téléchargés.
+    deploy: # Réglages de ressources.
+      resources: # Ressources demandées au moteur Docker.
+        reservations: # Ressources réservées au conteneur.
+          devices: # Périphériques matériels.
+            - driver: nvidia # Fournis par le runtime NVIDIA.
+              count: all # Tous les GPU de l'hôte.
+              capabilities: [gpu] # Accès au calcul GPU.
+volumes: # Volumes utilisés par le projet.
+  {{ ollama_volume }}: # Volume des modèles.
+    external: true # Créé en dehors de Compose : « docker compose down » ne le supprime jamais.

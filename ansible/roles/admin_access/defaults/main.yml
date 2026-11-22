@@ -1,0 +1,5 @@
+# Interface du rôle admin_access : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variable obligatoire, sans valeur par défaut :
+#   admin_access_keys_file : fichier de clés publiques, cherché dans ansible/files/ (ex. cles-ssh/pinas-authorized_keys).
+
+admin_access_user: "{{ ansible_user }}" # Compte Linux qui reçoit les clés ; par défaut, celui qu'Ansible utilise pour se connecter.

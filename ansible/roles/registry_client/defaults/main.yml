@@ -1,0 +1,7 @@
+# Interface du rôle registry_client : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+
+registry_client_server_host: nas # Nom, dans l'inventaire, de l'hôte qui héberge le registry.
+registry_client_endpoint: "{{ registry_pull_endpoint }}" # Adresse et port de téléchargement, définis dans group_vars/all.yml.
+registry_client_ca_path: /srv/registry/registry.crt # Certificat public du registry, lisible sur le serveur par le compte SSH.
+registry_client_user: "{{ hostvars[registry_client_server_host].registry_reader_user }}" # Compte de lecture déclaré sur le serveur.
+registry_client_password: "{{ hostvars[registry_client_server_host].registry_reader_password }}" # Mot de passe chiffré par Vault sur le serveur.

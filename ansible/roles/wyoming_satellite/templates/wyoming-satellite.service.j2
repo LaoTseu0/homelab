@@ -1,0 +1,26 @@
+# Géré par Ansible (rôle wyoming_satellite) : modifier le rôle ou ses variables, pas ce fichier.
+# La carte son est désignée par son NOM (CARD=...) et non par son numéro ALSA :
+# le numéro dépend de l'ordre de détection et peut changer d'un démarrage à l'autre.
+# Vérifier le nom avec : arecord -l
+
+[Unit]
+Description=Wyoming Satellite ({{ wyoming_satellite_name }}) - micro et haut-parleur vers Home Assistant
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+User={{ wyoming_satellite_user }}
+WorkingDirectory={{ wyoming_satellite_dir }}
+ExecStart={{ wyoming_satellite_dir }}/script/run \
+  --name '{{ wyoming_satellite_name }}' \
+  --uri 'tcp://0.0.0.0:{{ wyoming_satellite_port }}' \
+  --mic-command 'arecord -D {{ wyoming_satellite_audio_device }} -r 16000 -c 1 -f S16_LE -t raw' \
+  --snd-command 'aplay -D {{ wyoming_satellite_audio_device }} -r 22050 -c 1 -f S16_LE -t raw' \
+  --wake-uri '{{ wyoming_satellite_wake_uri }}' \
+  --wake-word-name '{{ wyoming_satellite_wake_word }}'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

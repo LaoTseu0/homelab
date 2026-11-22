@@ -1,0 +1,12 @@
+# Interface du rôle wyoming_satellite : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variable obligatoire, sans valeur par défaut :
+#   wyoming_satellite_wake_word : mot de réveil attendu, identique à celui préchargé par openWakeWord.
+
+wyoming_satellite_active: false # Démarre le service ; à passer à true quand le micro et le haut-parleur sont branchés.
+wyoming_satellite_version: v1.4.1 # Version installée si le clone manque.
+wyoming_satellite_user: "{{ ansible_user }}" # Compte qui possède le clone et exécute le service ; doit être le compte SSH d'Ansible.
+wyoming_satellite_dir: "/home/{{ wyoming_satellite_user }}/wyoming-satellite" # Dossier du clone et de son environnement Python.
+wyoming_satellite_name: bureau # Nom du satellite affiché dans Home Assistant.
+wyoming_satellite_port: 10700 # Port sur lequel Home Assistant contacte le satellite.
+wyoming_satellite_audio_device: "plughw:CARD=Array,DEV=0" # Carte son ALSA désignée par son nom, stable d'un démarrage à l'autre (« arecord -l »).
+wyoming_satellite_wake_uri: tcp://127.0.0.1:10400 # Adresse du service openWakeWord.

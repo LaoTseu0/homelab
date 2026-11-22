@@ -1,0 +1,5 @@
+# Handlers du rôle data_disk : exécutés une seule fois en fin de play, seulement s'ils ont été notifiés.
+
+- name: Recharger systemd # Nom appelé par « notify » dans les tâches du rôle.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    daemon_reload: true # Relit les fichiers d'unités et leurs compléments ; ils s'appliquent au prochain démarrage du service.

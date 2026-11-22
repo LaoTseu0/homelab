@@ -1,21 +1,23 @@
-- name: Installer HAProxy
-  ansible.builtin.apt:
-    name: haproxy
-    state: present
+# Rôle haproxy : relais TCP filtré par adresse source, ici pour donner accès à Samba depuis le réseau Maison.
 
-- name: Générer la configuration HAProxy
-  ansible.builtin.template:
+- name: Installer HAProxy # Paquet du relais.
+  ansible.builtin.apt: # Module qui gère les paquets APT.
+    name: haproxy # Paquet à installer.
+    state: present # Installe le paquet s'il manque.
+
+- name: Générer la configuration HAProxy # Écoute, filtrage et serveur de destination.
+  ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
     src: haproxy-samba.cfg.j2 # Modèle situé dans templates/ du rôle.
-    dest: /etc/haproxy/haproxy.cfg # Fichier généré sur le Pi 4.
-    owner: root # Compte propriétaire du fichier.
-    group: root # Groupe propriétaire du fichier.
-    mode: '0644' # Propriétaire en lecture/écriture, groupe et autres en lecture.
-    backup: true # Sauvegarde l’ancien fichier lors de son remplacement.
-    validate: /usr/sbin/haproxy -c -f %s # Vérifie le fichier généré avant son installation.
-  notify: Redémarrer HAProxy # Programme le handler si cette tâche signale un changement.
+    dest: /etc/haproxy/haproxy.cfg # Configuration lue par HAProxy.
+    owner: root # Compte propriétaire.
+    group: root # Groupe propriétaire.
+    mode: '0644' # Lisible par tous, modifiable par root.
+    backup: true # Conserve l'ancienne version du fichier.
+    validate: /usr/sbin/haproxy -c -f %s # Refuse un fichier que HAProxy ne saurait pas lire.
+  notify: Redémarrer HAProxy # Programme le handler si la configuration change.
 
-- name: Activer et démarrer HAProxy
-  ansible.builtin.service:
-    name: haproxy
-    enabled: true
-    state: started
+- name: Activer et démarrer HAProxy # Le service démarre aussi au boot.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: haproxy # Service concerné.
+    enabled: true # Active le démarrage au boot.
+    state: started # Démarre le service s'il est arrêté.

@@ -1,0 +1,14 @@
+# Interface du rôle registry : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variables obligatoires, sans valeur par défaut :
+#   registry_image           : image Distribution fixée par digest (host_vars).
+#   registry_lan_ip          : adresse d'écoute, inscrite dans le certificat (group_vars/all.yml).
+#   registry_pull_port       : port du service de téléchargement en lecture seule (group_vars/all.yml).
+#   registry_admin_user      : compte de publication (Vault).
+#   registry_admin_password  : son mot de passe (Vault).
+#   registry_reader_user     : compte de téléchargement (host_vars).
+#   registry_reader_password : son mot de passe (Vault).
+
+registry_root: /srv/registry # Projet Compose, certificats et fichiers de comptes.
+registry_data_dir: /srv/appdata/registry # Stockage persistant des images.
+registry_push_port: 5000 # Port du service de publication.
+registry_certificate_days: 365 # Durée de validité du certificat autosigné, en jours.

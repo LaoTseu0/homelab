@@ -1,0 +1,8 @@
+# Interface du rôle data_disk : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variable obligatoire, sans valeur par défaut :
+#   data_disk_uuid : UUID du système de fichiers à monter (relevé avec « lsblk -f »).
+
+data_disk_mount_point: /srv # Dossier dans lequel le disque est monté.
+data_disk_fstype: ext4 # Type du système de fichiers présent sur le disque.
+data_disk_mount_options: defaults,nofail # Options standard ; nofail laisse l'hôte démarrer même si le disque manque.
+data_disk_dependent_services: [] # Services systemd qui ne doivent pas démarrer sans le disque (ex. smbd, docker).

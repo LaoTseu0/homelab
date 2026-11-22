@@ -29,7 +29,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 | Châssis et alimentation | Boîtier, refroidissement, bloc d’alimentation et modèle microSD à relever |
 | Système | Raspberry Pi OS 64 bits, base Debian Trixie. Version du noyau à relever |
 | Moteur de conteneurs | Docker Engine `29.10.0`, Compose `v5.8.0`, stockage `overlayfs` au dernier relevé. Les contrôleurs mémoire et swap ont été vérifiés actifs ensuite |
-| Services | Samba et Git sur l’hôte. Registry Distribution conteneurisé. Montage et chemins de données dans le [rôle NAS](../ansible/roles/nas/) et les [variables NAS](../ansible/host_vars/nas/main.yml) |
+| Services | Samba et Git sur l’hôte. Registry Distribution conteneurisé. Rôles appliqués dans le [profil du NAS](../ansible/configurer-nas.yml), réglages dans les [variables NAS](../ansible/host_vars/nas/main.yml) |
 
 ## Passerelle — `lab-rpi4-1`
 
@@ -63,4 +63,4 @@ Le raccordement au Homelab et l’état de la tour depuis la bascule réseau res
 
 ## Compléter les relevés
 
-Depuis le dossier Ansible sous WSL, lancer `ansible-playbook -i inventory.yml inventorier.yml --ask-vault-pass`. Le playbook relève la distribution, le noyau, le CPU, la RAM visible, les disques, les interfaces et les composants PCI/USB détectés. Il utilise les accès SSH existants. Les références de l’alimentation, du HAT et du refroidissement se vérifient sur les étiquettes ou les composants. La seconde tour pourra être relevée une fois son accès SSH établi.
+Depuis le dossier Ansible sous WSL, lancer `ansible-playbook -i inventory.yml diagnostics/inventorier.yml --ask-vault-pass`. Le playbook relève la distribution, le noyau, le CPU, la RAM visible, les disques, les interfaces et les composants PCI/USB détectés. Il utilise les accès SSH existants. Les références de l’alimentation, du HAT et du refroidissement se vérifient sur les étiquettes ou les composants. La seconde tour pourra être relevée une fois son accès SSH établi.

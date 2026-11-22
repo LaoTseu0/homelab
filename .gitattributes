@@ -3,3 +3,7 @@
 *.sh      text eol=lf
 *.service text eol=lf
 *.yml     text eol=lf
+# Les modèles Jinja2 et les clés SSH sont déployés tels quels sur les serveurs Linux.
+*.j2           text eol=lf
+*.pub          text eol=lf
+*authorized_keys text eol=lf

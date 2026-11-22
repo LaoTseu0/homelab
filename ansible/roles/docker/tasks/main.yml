@@ -1,141 +1,141 @@
-- name: Installer les certificats nécessaires aux téléchargements HTTPS
-  ansible.builtin.apt:
+# Rôle docker : installe Docker Engine depuis le dépôt officiel et, si demandé, place ses données ailleurs.
+
+- name: Vérifier que le système est pris en charge par le dépôt Docker # Arrête le rôle tôt sur un système non prévu.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: # Conditions à respecter.
+      - ansible_facts.distribution in ['Debian', 'Ubuntu'] # Raspberry Pi OS se présente comme Debian.
+      - ansible_facts.architecture in ['aarch64', 'x86_64'] # Architectures 64 bits publiées par Docker.
+    fail_msg: Système non prévu. Sur Raspberry Pi, utiliser Raspberry Pi OS 64 bits. # Message affiché en cas d'échec.
+
+- name: Lire la liste des paquets installés # Permet de savoir si Docker est déjà présent, et sous quelle forme.
+  ansible.builtin.package_facts: # Module qui remplit ansible_facts.packages.
+    manager: apt # Interroge la base de paquets APT.
+
+- name: Refuser un Docker installé depuis un autre paquet # Évite qu'APT remplace silencieusement une installation existante.
+  ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+    that: item not in ansible_facts.packages # Le paquet concurrent ne doit pas être installé.
+    fail_msg: "{{ item }} est installé. Auditer cette installation avant de la remplacer." # Message propre au paquet trouvé.
+  loop: "{{ docker_conflicting_packages }}" # Vérifie chaque paquet concurrent.
+
+- name: Installer les certificats racine # Nécessaires pour télécharger la clé du dépôt en HTTPS.
+  ansible.builtin.apt: # Module qui gère les paquets APT.
     name: ca-certificates # Certificats utilisés pour vérifier les serveurs HTTPS.
     state: present # Le paquet doit être installé.
-    update_cache: true # Actualise les informations des dépôts si nécessaire.
-    cache_valid_time: 3600 # Réutilise les informations pendant une heure.
+    update_cache: true # Actualise la liste des paquets si elle est trop ancienne.
+    cache_valid_time: 3600 # Considère la liste comme récente pendant une heure.
 
-- name: Préparer le dossier des clés des dépôts APT
-  ansible.builtin.file:
-    path: /etc/apt/keyrings # Emplacement des clés de confiance ajoutées par l’administrateur.
-    state: directory # Le dossier doit exister.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: '0755' # Permet à APT de parcourir ce dossier.
+- name: Déclarer le dépôt officiel Docker sur un hôte qui n'a pas encore Docker # Un hôte déjà équipé garde sa déclaration actuelle.
+  when: "'docker-ce' not in ansible_facts.packages" # Condition partagée par toutes les tâches du bloc.
+  block: # Groupe de tâches soumises à la même condition.
+    - name: Préparer le dossier des clés APT # Emplacement des clés de confiance ajoutées par l'administrateur.
+      ansible.builtin.file: # Module qui gère fichiers et dossiers.
+        path: /etc/apt/keyrings # Dossier des clés.
+        state: directory # Le chemin doit être un dossier.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: '0755' # Permet à APT de parcourir ce dossier.
 
-- name: Télécharger la clé de signature du dépôt Docker
-  ansible.builtin.get_url:
-    url: https://download.docker.com/linux/debian/gpg # Adresse officielle de la clé.
-    dest: /etc/apt/keyrings/docker.asc # Fichier de clé sur le NAS.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: '0644' # Permet à APT de lire la clé.
+    - name: Télécharger la clé de signature du dépôt Docker # APT vérifie les paquets avec cette clé.
+      ansible.builtin.get_url: # Module qui télécharge un fichier.
+        url: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}/gpg" # Clé officielle propre à la distribution.
+        dest: /etc/apt/keyrings/docker.asc # Fichier de clé sur l'hôte.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: '0644' # Lisible par APT.
 
-- name: Déclarer le dépôt officiel Docker
-  ansible.builtin.copy:
-    dest: /etc/apt/sources.list.d/docker.sources # Fichier de déclaration du dépôt.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: '0644' # Rend la déclaration lisible par APT.
-    content: | # Texte multiligne qui sera écrit dans le fichier.
-      Types: deb
-      URIs: https://download.docker.com/linux/debian
-      Suites: {{ docker_apt_suite }}
-      Components: stable
-      Architectures: {{ docker_apt_arch }}
-      Signed-By: /etc/apt/keyrings/docker.asc
+    - name: Écrire la déclaration du dépôt # Indique à APT où trouver les paquets Docker.
+      ansible.builtin.template: # Module qui génère un fichier à partir d'un modèle.
+        src: docker.sources.j2 # Modèle situé dans templates/ du rôle.
+        dest: /etc/apt/sources.list.d/docker.sources # Fichier lu par APT.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: '0644' # Lisible par APT.
+      register: docker_repository # Mémorise si le dépôt vient d'être ajouté.
 
-- name: Préparer les dossiers de configuration et de stockage Docker
-  ansible.builtin.file:
-    path: "{{ item.path }}" # Chemin traité pendant cette itération.
-    state: directory # Le chemin doit être un dossier.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: "{{ item.mode }}" # Permissions adaptées à chaque dossier.
-  loop:
-    - { path: /etc/docker, mode: '0755' } # Configuration du moteur Docker.
-    - { path: /etc/containerd, mode: '0755' } # Configuration de containerd.
-    - { path: /srv/docker, mode: '0710' } # Données persistantes du moteur Docker.
-    - { path: /srv/containerd, mode: '0700' } # Données persistantes de containerd.
-    - { path: /etc/systemd/system/docker.service.d, mode: '0755' } # Complément du service Docker.
-    - { path: /etc/systemd/system/containerd.service.d, mode: '0755' } # Complément du service containerd.
+- name: Placer les données du moteur Docker hors de l'emplacement par défaut # Seulement si docker_data_root est renseigné.
+  when: docker_data_root | length > 0 # Condition partagée par toutes les tâches du bloc.
+  block: # Groupe de tâches soumises à la même condition.
+    - name: Préparer les dossiers de configuration et de données Docker # Doivent exister avant l'installation.
+      ansible.builtin.file: # Module qui gère fichiers et dossiers.
+        path: "{{ item.path }}" # Chemin traité pendant cette itération.
+        state: directory # Le chemin doit être un dossier.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: "{{ item.mode }}" # Permissions propres à chaque dossier.
+      loop: # Dossiers à préparer.
+        - { path: /etc/docker, mode: '0755' } # Configuration du moteur.
+        - { path: "{{ docker_data_root }}", mode: '0710' } # Données persistantes du moteur.
 
-- name: Définir le stockage du moteur Docker
-  ansible.builtin.copy:
-    dest: /etc/docker/daemon.json # Configuration lue par le moteur Docker.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: '0644' # Configuration lisible par le service.
-    content: | # Contenu JSON du fichier.
-      {
-        "data-root": "/srv/docker"
-      }
+    - name: Vérifier si daemon.json existe déjà # Un autre rôle (ex. nvidia_gpu) peut y avoir ajouté ses réglages.
+      ansible.builtin.stat: # Module qui lit les propriétés d'un fichier.
+        path: /etc/docker/daemon.json # Configuration du moteur Docker.
+      register: docker_daemon_file # Mémorise si le fichier existe.
 
-- name: Définir le stockage de containerd
-  ansible.builtin.copy:
-    dest: /etc/containerd/config.toml # Configuration lue par containerd.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: '0644' # Configuration lisible par le service.
-    content: | # Contenu TOML du fichier.
-      version = 2
-      root = "/srv/containerd"
+    - name: Lire les réglages existants # Permet de les conserver lors de l'écriture.
+      ansible.builtin.slurp: # Module qui lit un fichier distant et le renvoie encodé en base64.
+        src: /etc/docker/daemon.json # Fichier lu.
+      register: docker_daemon_current # Contenu actuel du fichier.
+      when: docker_daemon_file.stat.exists # Rien à lire si le fichier n'existe pas.
 
-- name: Déclarer la dépendance des services Docker au NVMe
-  ansible.builtin.template:
-    src: storage.conf.j2 # Modèle commun situé dans templates/ du rôle.
-    dest: "/etc/systemd/system/{{ item }}.service.d/nas-storage.conf" # Complément propre au service courant.
-    owner: root # Compte propriétaire.
-    group: root # Groupe propriétaire.
-    mode: '0644' # Fichier lisible par systemd.
-  loop:
-    - containerd # Prépare la règle pour containerd.
-    - docker # Prépare la règle pour le moteur Docker.
+    - name: Écrire daemon.json en conservant les autres réglages # Ce rôle ne fixe que data-root.
+      ansible.builtin.copy: # Module qui écrit un contenu dans un fichier.
+        dest: /etc/docker/daemon.json # Configuration lue par le moteur Docker.
+        content: "{{ docker_daemon_existing | combine({'data-root': docker_data_root}) | to_nice_json(indent=2) }}\n" # Fusionne data-root dans les réglages existants.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: '0644' # Lisible par le service.
+      vars: # Variables propres à cette tâche.
+        docker_daemon_existing: "{{ (docker_daemon_current.content | b64decode | from_json) if docker_daemon_file.stat.exists else {} }}" # Réglages actuels, ou aucun.
+      notify: Redémarrer Docker # Un moteur déjà lancé doit redémarrer pour prendre en compte le changement.
 
-- name: Installer Docker Engine et ses outils
-  ansible.builtin.apt:
-    name: # Paquets provenant du dépôt officiel Docker.
-      - docker-ce # Moteur qui exécute les conteneurs.
-      - docker-ce-cli # Commande docker.
-      - containerd.io # Runtime et stockage utilisés par Docker.
-      - docker-buildx-plugin # Outil de construction des images.
-      - docker-compose-plugin # Commande docker compose.
+- name: Placer les données de containerd hors de l'emplacement par défaut # Seulement si docker_containerd_root est renseigné.
+  when: docker_containerd_root | length > 0 # Condition partagée par toutes les tâches du bloc.
+  block: # Groupe de tâches soumises à la même condition.
+    - name: Préparer les dossiers de configuration et de données de containerd # Doivent exister avant l'installation.
+      ansible.builtin.file: # Module qui gère fichiers et dossiers.
+        path: "{{ item.path }}" # Chemin traité pendant cette itération.
+        state: directory # Le chemin doit être un dossier.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: "{{ item.mode }}" # Permissions propres à chaque dossier.
+      loop: # Dossiers à préparer.
+        - { path: /etc/containerd, mode: '0755' } # Configuration de containerd.
+        - { path: "{{ docker_containerd_root }}", mode: '0700' } # Données persistantes de containerd.
+
+    - name: Définir le stockage de containerd # Fichier entièrement géré par ce rôle.
+      ansible.builtin.copy: # Module qui écrit un contenu dans un fichier.
+        dest: /etc/containerd/config.toml # Configuration lue par containerd.
+        content: "version = 2\nroot = \"{{ docker_containerd_root }}\"\n" # Format de configuration version 2 et dossier de données.
+        owner: root # Compte propriétaire.
+        group: root # Groupe propriétaire.
+        mode: '0644' # Lisible par le service.
+      notify: Redémarrer containerd # Un containerd déjà lancé doit redémarrer pour prendre en compte le changement.
+
+- name: Installer Docker Engine et ses outils # Utilise le dépôt déclaré plus haut.
+  ansible.builtin.apt: # Module qui gère les paquets APT.
+    name: "{{ docker_packages }}" # Liste définie dans defaults/main.yml.
     state: present # Installe les paquets manquants.
-    update_cache: true # Prend en compte le dépôt Docker ajouté précédemment.
-    policy_rc_d: 101 # Bloque le démarrage automatique des services pendant cette installation.
+    update_cache: "{{ docker_repository.changed | default(false) }}" # Relit les dépôts seulement si celui de Docker vient d'être ajouté.
+    policy_rc_d: 101 # Empêche le démarrage automatique pendant l'installation, avant que la configuration soit validée.
 
-- name: Valider la configuration du moteur Docker
-  ansible.builtin.command:
-    cmd: /usr/bin/dockerd --validate --config-file=/etc/docker/daemon.json # Vérifie la configuration préparée.
-  changed_when: false # Ce contrôle consulte la configuration.
+- name: Valider la configuration du moteur Docker # Échoue avant le démarrage si daemon.json est invalide.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [/usr/bin/dockerd, --validate, --config-file=/etc/docker/daemon.json] # Demande à dockerd de vérifier le fichier.
+  changed_when: false # Ce contrôle ne modifie rien.
+  when: docker_data_root | length > 0 # Seulement si ce rôle gère daemon.json.
 
-- name: Valider la configuration de containerd
-  ansible.builtin.command:
-    cmd: /usr/bin/containerd --config /etc/containerd/config.toml config dump # Charge et interprète la configuration.
-  changed_when: false # Ce contrôle consulte la configuration.
+- name: Valider la configuration de containerd # Échoue avant le démarrage si config.toml est invalide.
+  ansible.builtin.command: # Module qui exécute une commande sans shell.
+    argv: [/usr/bin/containerd, --config, /etc/containerd/config.toml, config, dump] # Charge et affiche la configuration complète.
+  changed_when: false # Ce contrôle ne modifie rien.
+  when: docker_containerd_root | length > 0 # Seulement si ce rôle gère config.toml.
 
-- name: Activer et démarrer les services Docker
-  ansible.builtin.systemd_service:
-    name: "{{ item }}" # Service traité dans cette itération.
-    daemon_reload: true # Charge notamment les dépendances au NVMe.
+- name: Activer et démarrer containerd puis Docker # Les services démarrent aussi au boot.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: "{{ item }}" # Service traité pendant cette itération.
+    daemon_reload: true # Prend en compte les compléments systemd ajoutés par d'autres rôles (ex. data_disk).
     enabled: true # Active le démarrage au boot.
-    state: started # Démarre le service s’il est arrêté.
-  loop:
-    - containerd # Démarre le runtime en premier.
-    - docker # Démarre ensuite le moteur Docker.
-
-- name: Sauvegarder les paramètres de démarrage avant activation des contrôleurs mémoire
-  ansible.builtin.copy:
-    src: /boot/firmware/cmdline.txt # Fichier de démarrage actuel sur le NAS.
-    dest: /var/backups/cmdline.txt.before-memory-cgroups # Sauvegarde sur la partition Linux, qui accepte les noms usuels.
-    remote_src: true # Lit le fichier source sur le NAS.
-    force: false # Conserve la première sauvegarde lors des passages suivants.
-    owner: root # Compte propriétaire de la sauvegarde.
-    group: root # Groupe propriétaire.
-    mode: '0600' # Réserve la lecture et l’écriture à root.
-
-- name: Activer les contrôleurs mémoire au démarrage du Raspberry Pi
-  ansible.builtin.replace:
-    path: /boot/firmware/cmdline.txt # Ligne des paramètres de démarrage du Pi.
-    regexp: '^(?!.*(?:^|\s){{ item | regex_escape }}(?:\s|$))(.+)$' # Sélectionne la ligne si le paramètre courant manque.
-    replace: '\1 {{ item }}' # Reprend la ligne existante et ajoute le paramètre à la fin.
-    backup: false # La tâche précédente conserve la sauvegarde sur la partition Linux.
-  loop:
-    - cgroup_enable=memory # Demande l’activation du contrôleur mémoire.
-    - cgroup_memory=1 # Complète l’activation pour Raspberry Pi OS.
-  register: rpi_cgroups_boot # Enregistre notamment si une des itérations a modifié le fichier.
-
-- name: Redémarrer le NAS après modification des paramètres de démarrage
-  ansible.builtin.reboot:
-    reboot_timeout: 600 # Temps maximal d’attente pour chacune des phases de vérification du redémarrage.
-  when: rpi_cgroups_boot.changed | default(false) # Redémarre uniquement si la tâche précédente a changé le fichier.
+    state: started # Démarre le service s'il est arrêté.
+  loop: # Ordre de démarrage.
+    - containerd # Le runtime d'abord.
+    - docker # Puis le moteur qui l'utilise.

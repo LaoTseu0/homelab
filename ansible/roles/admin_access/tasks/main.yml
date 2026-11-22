@@ -1,0 +1,9 @@
+# Rôle admin_access : garantit que les clés SSH de l'administrateur ouvrent une session sur l'hôte.
+
+- name: Autoriser les clés SSH d'administration # Nom affiché dans la sortie d'Ansible.
+  ansible.posix.authorized_key: # Module de la collection ansible.posix qui gère le fichier ~/.ssh/authorized_keys.
+    user: "{{ admin_access_user }}" # Compte Linux auquel ces clés donnent accès.
+    key: "{{ lookup('ansible.builtin.file', admin_access_keys_file) }}" # Lit le fichier sur le control node ; il peut contenir plusieurs clés.
+    state: present # Ajoute les clés manquantes.
+    manage_dir: true # Gère aussi le propriétaire et les permissions du dossier ~/.ssh.
+    exclusive: false # Conserve les autres clés déjà présentes sur l'hôte.

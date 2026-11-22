@@ -1,0 +1,8 @@
+# Interface du rôle rpi_boot : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+
+rpi_boot_cmdline_path: /boot/firmware/cmdline.txt # Fichier qui contient la ligne de paramètres du noyau sur Raspberry Pi OS.
+rpi_boot_cmdline_backup: /var/backups/cmdline.txt.before-memory-cgroups # Copie prise avant la première modification, sur la partition Linux.
+rpi_boot_cmdline_params: # Paramètres qui doivent figurer sur la ligne de démarrage.
+  - cgroup_enable=memory # Active le contrôleur mémoire des cgroups, utilisé par Docker pour limiter la RAM des conteneurs.
+  - cgroup_memory=1 # Complète cette activation sur les noyaux Raspberry Pi.
+rpi_boot_reboot_timeout: 600 # Délai maximal, en secondes, accordé à chaque phase du redémarrage.

@@ -1,1 +1,10 @@
-ansible_python_interpreter: /usr/bin/python3 # Python à utiliser pour exécuter les modules sur les hôtes du groupe all.
+# Variables communes à tous les hôtes (groupe all).
+# Elles décrivent le homelab lui-même et sont partagées par plusieurs rôles ou plusieurs machines.
+
+ansible_python_interpreter: /usr/bin/python3 # Python utilisé pour exécuter les modules sur les hôtes.
+
+nas_address: "192.168.50.198" # Adresse du NAS sur le réseau Homelab ; à changer ici seulement si elle change.
+
+registry_lan_ip: "{{ nas_address }}" # Le registry écoute sur l'adresse du NAS ; elle figure aussi dans son certificat.
+registry_pull_port: 5001 # Port du service de téléchargement en lecture seule.
+registry_pull_endpoint: "{{ registry_lan_ip }}:{{ registry_pull_port }}" # Adresse utilisée par les clients et dans les références d'images.

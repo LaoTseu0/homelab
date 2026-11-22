@@ -1,0 +1,12 @@
+# Handlers du rôle docker : exécutés une seule fois en fin de play, seulement s'ils ont été notifiés.
+# Ils s'exécutent dans l'ordre de ce fichier : containerd avant Docker.
+
+- name: Redémarrer containerd # Nom appelé par « notify » dans les tâches du rôle.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: containerd # Service concerné.
+    state: restarted # Redémarre le service pour charger sa nouvelle configuration.
+
+- name: Redémarrer Docker # Nom appelé par « notify » dans les tâches du rôle.
+  ansible.builtin.systemd_service: # Module qui pilote systemd.
+    name: docker # Service concerné.
+    state: restarted # Redémarre le moteur ; les conteneurs « unless-stopped » repartent ensuite.

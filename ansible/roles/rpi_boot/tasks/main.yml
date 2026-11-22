@@ -1,0 +1,25 @@
+# Rôle rpi_boot : ajoute des paramètres au démarrage d'un Raspberry Pi et redémarre si la ligne a changé.
+
+- name: Sauvegarder la ligne de démarrage avant toute modification # Permet de revenir à l'état d'origine.
+  ansible.builtin.copy: # Module qui copie un fichier ou écrit un contenu.
+    src: "{{ rpi_boot_cmdline_path }}" # Fichier de démarrage actuel.
+    dest: "{{ rpi_boot_cmdline_backup }}" # Emplacement de la sauvegarde.
+    remote_src: true # La source se trouve sur l'hôte, pas sur le control node.
+    force: false # Conserve la première sauvegarde lors des passages suivants.
+    owner: root # Compte propriétaire de la sauvegarde.
+    group: root # Groupe propriétaire.
+    mode: '0600' # Lecture et écriture réservées à root.
+
+- name: Ajouter les paramètres manquants à la ligne de démarrage # Modifie le fichier seulement si un paramètre manque.
+  ansible.builtin.replace: # Module qui remplace du texte à l'aide d'une expression régulière.
+    path: "{{ rpi_boot_cmdline_path }}" # Fichier modifié.
+    regexp: '^(?!.*(?:^|\s){{ item | regex_escape }}(?:\s|$))(.+)$' # Sélectionne la ligne seulement si le paramètre courant n'y figure pas.
+    replace: '\1 {{ item }}' # Reprend la ligne existante et ajoute le paramètre à la fin.
+    backup: false # La tâche précédente conserve déjà une sauvegarde.
+  loop: "{{ rpi_boot_cmdline_params }}" # Une itération par paramètre attendu.
+  register: rpi_boot_cmdline # Mémorise si au moins une itération a modifié le fichier.
+
+- name: Redémarrer pour appliquer les nouveaux paramètres # Le noyau ne lit cette ligne qu'au démarrage.
+  ansible.builtin.reboot: # Module qui redémarre l'hôte et attend son retour.
+    reboot_timeout: "{{ rpi_boot_reboot_timeout }}" # Durée maximale d'attente.
+  when: rpi_boot_cmdline.changed # Redémarre uniquement si la ligne a été modifiée.

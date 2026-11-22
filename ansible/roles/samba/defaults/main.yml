@@ -1,0 +1,11 @@
+# Interface du rôle samba : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Chaque entrée de samba_users décrit un compte et son partage personnel :
+#   name      : compte Linux et identifiant Samba
+#   uid / gid : identifiants numériques, conservés d'une réinstallation à l'autre
+#   directory : nom du dossier sous samba_shares_root
+#   share     : nom du partage vu par les clients (\\serveur\<share>)
+# Le mot de passe Samba de chaque compte se définit à la main avec « smbpasswd -a <name> ».
+
+samba_users: [] # Comptes et partages personnels ; vide = aucun partage.
+samba_shares_root: /srv/partages # Dossier parent des partages personnels.
+samba_state_dir: /srv/samba # Base des comptes Samba et état du service.

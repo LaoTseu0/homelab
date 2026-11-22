@@ -1,0 +1,12 @@
+# Profil de la passerelle : liste des rôles appliqués au Pi 4 (lab-1).
+# La connexion Wi-Fi et le profil NetworkManager du Pi 4 sont préparés à part.
+# Lancement : ansible-playbook -i inventory.yml configurer-passerelle.yml --ask-become-pass
+
+- name: Configurer la passerelle # Description du play.
+  hosts: lab-1 # Machine ciblée dans l'inventaire.
+  gather_facts: true # Relève les informations système, disponibles pour les rôles.
+  become: true # Exécute les tâches avec sudo.
+
+  roles: # Rôles appliqués, dans cet ordre.
+    - role: haproxy # Relais SMB du réseau Maison vers le NAS.
+      tags: [haproxy] # Permet « --tags haproxy ».

@@ -1,0 +1,15 @@
+# Interface du rôle home_assistant : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variables obligatoires, sans valeur par défaut :
+#   home_assistant_images    : dictionnaire des images fixées par digest, une par service
+#                              (homeassistant, whisper, piper, openwakeword).
+#   home_assistant_wake_word : modèle de mot de réveil préchargé par openWakeWord.
+
+home_assistant_project: home-assistant # Nom du projet Compose ; Docker l'inscrit sur chaque conteneur.
+home_assistant_compose_dir: /srv/compose/home-assistant # Dossier qui contient le fichier Compose sur l'hôte.
+home_assistant_config_dir: /srv/homeassistant # Configuration et base de données de Home Assistant.
+home_assistant_timezone: Europe/Paris # Fuseau horaire du conteneur Home Assistant.
+home_assistant_language: fr # Langue reconnue par Whisper.
+home_assistant_whisper_data_dir: /srv/wyoming/whisper # Modèles téléchargés par Whisper.
+home_assistant_whisper_model: small-int8 # Modèle de reconnaissance vocale.
+home_assistant_piper_data_dir: /srv/wyoming/piper # Voix téléchargées par Piper.
+home_assistant_piper_voice: fr_FR-siwis-medium # Voix de synthèse.

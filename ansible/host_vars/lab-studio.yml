@@ -1,12 +1,19 @@
-lab_studio_nvidia_branch: 595-open # Branche Ubuntu déjà validée avec la RTX 2060.
-lab_studio_satellite_active: false # À passer à true quand le matériel audio est rebranché.
-lab_studio_satellite_version: v1.4.1 # Version à installer si le clone manque sur la tour.
-lab_studio_registry_images: # Images amd64 publiées sous studio/ et référencées par digest.
-  ollama: "192.168.50.198:5001/studio/ollama@sha256:44a722d67f64752ee8d8d1d19d26d83fce0a522af9eab1eafcc6f5c4f61990f0"
-  homeassistant: "192.168.50.198:5001/studio/homeassistant@sha256:21e0d1bae299819d8cf4ef8aa197593205a5fae51c69031c13bfd1eac8c56204"
-  whisper: "192.168.50.198:5001/studio/whisper@sha256:4aa2848f0e8846722c246224fb958e3a6ecf89d10db04a86cbc95480d92b4d34"
-  piper: "192.168.50.198:5001/studio/piper@sha256:659be31324ce981b03a906197e0dfdb519b84e5e4960f746d08ba217c013519f"
-  openwakeword: "192.168.50.198:5001/studio/openwakeword@sha256:271ff3b56c13f400f7ced56b962fbc02de3cf5e5f34dc65d75ca63b4789de166"
-lab_studio_models: # Ollama télécharge seulement ceux qui manquent dans le volume.
-  - qwen3:4b-instruct-2507-q4_K_M
-  - nomic-embed-text:latest
+# Variables de la tour GPU (lab-studio).
+# Les images sont publiées sous studio/ dans le registry du NAS et référencées par digest (voir doc/exploitation.md).
+
+nvidia_gpu_driver_branch: 595-open # Branche du pilote Ubuntu validée avec la RTX 2060.
+
+ollama_image: "{{ registry_pull_endpoint }}/studio/ollama@sha256:44a722d67f64752ee8d8d1d19d26d83fce0a522af9eab1eafcc6f5c4f61990f0" # Image amd64 d'Ollama.
+ollama_models: # Modèles téléchargés s'ils manquent dans le volume.
+  - qwen3:4b-instruct-2507-q4_K_M # Modèle de conversation.
+  - nomic-embed-text:latest # Modèle d'embeddings.
+
+home_assistant_images: # Images amd64 de la stack Home Assistant, une par service.
+  homeassistant: "{{ registry_pull_endpoint }}/studio/homeassistant@sha256:21e0d1bae299819d8cf4ef8aa197593205a5fae51c69031c13bfd1eac8c56204" # Home Assistant.
+  whisper: "{{ registry_pull_endpoint }}/studio/whisper@sha256:4aa2848f0e8846722c246224fb958e3a6ecf89d10db04a86cbc95480d92b4d34" # Reconnaissance vocale.
+  piper: "{{ registry_pull_endpoint }}/studio/piper@sha256:659be31324ce981b03a906197e0dfdb519b84e5e4960f746d08ba217c013519f" # Synthèse vocale.
+  openwakeword: "{{ registry_pull_endpoint }}/studio/openwakeword@sha256:271ff3b56c13f400f7ced56b962fbc02de3cf5e5f34dc65d75ca63b4789de166" # Mot de réveil.
+home_assistant_wake_word: hey_jarvis # Modèle préentraîné d'openWakeWord ; en changer modifie la phrase à prononcer.
+
+wyoming_satellite_active: false # À passer à true quand le micro et le haut-parleur sont rebranchés.
+wyoming_satellite_wake_word: "{{ home_assistant_wake_word }}" # Le satellite attend le mot préchargé par openWakeWord.

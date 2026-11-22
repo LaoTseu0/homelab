@@ -1,0 +1,10 @@
+# Interface du rôle ollama : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variable obligatoire, sans valeur par défaut :
+#   ollama_image : image Ollama fixée par digest (nom@sha256:...).
+# Le rôle exige un GPU NVIDIA utilisable par Docker (rôle nvidia_gpu).
+
+ollama_project: ollama # Nom du projet Compose ; Docker l'inscrit sur chaque conteneur.
+ollama_compose_dir: /srv/compose/ollama # Dossier qui contient le fichier Compose sur l'hôte.
+ollama_volume: ollama # Volume Docker existant qui conserve les modèles téléchargés.
+ollama_port: 11434 # Port publié sur l'hôte pour l'API d'Ollama.
+ollama_models: [] # Modèles à télécharger s'ils manquent (ex. qwen3:4b-instruct-2507-q4_K_M).

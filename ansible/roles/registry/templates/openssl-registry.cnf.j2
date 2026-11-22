@@ -1,0 +1,12 @@
+# Généré par Ansible (rôle registry) : configuration OpenSSL du certificat autosigné.
+[req]
+prompt = no
+distinguished_name = dn
+x509_extensions = server
+[dn]
+CN = Homelab Registry
+[server]
+basicConstraints = critical,CA:FALSE
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = IP:{{ registry_lan_ip }}

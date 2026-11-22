@@ -33,7 +33,7 @@ Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côt
 | `lab-studio` | 11434/TCP | API Ollama, publiée par Compose |
 | `lab-studio` | 10200, 10300, 10400/TCP | Piper, Whisper et openWakeWord, publiés par Compose |
 
-Ce tableau décrit les flux configurés et les accès confirmés. Les ports publiés par Compose ne prouvent pas la présence de restrictions par IP. Le satellite audio est actuellement à l’arrêt. [Compose de la tour](../ansible/roles/lab-studio/files/docker-compose.yml)
+Ce tableau décrit les flux configurés et les accès confirmés. Les ports publiés par Compose ne prouvent pas la présence de restrictions par IP. Le satellite audio est actuellement à l’arrêt. Compose de la tour : [Ollama](../ansible/roles/ollama/templates/compose.yml.j2) · [Home Assistant](../ansible/roles/home_assistant/templates/compose.yml.j2)
 
 ### Accès Samba via le relais
 

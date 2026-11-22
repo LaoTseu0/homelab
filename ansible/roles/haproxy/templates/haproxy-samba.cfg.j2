@@ -11,7 +11,7 @@ defaults
     timeout server 10m
 
 listen samba_maison
-    bind {{ haproxy_listen_address }}:445
+    bind {{ haproxy_listen_address }}:{{ haproxy_port }}
     acl telephones_autorises src {{ haproxy_allowed_sources | join(' ') }}
     tcp-request connection reject unless telephones_autorises
-    server nas {{ haproxy_nas_address }}:445
+    server nas {{ haproxy_backend_address }}:{{ haproxy_port }}

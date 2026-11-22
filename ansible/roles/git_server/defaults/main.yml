@@ -1,0 +1,11 @@
+# Interface du rôle git_server : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Chaque entrée de git_server_agents décrit un compte technique qui accède aux dépôts par SSH :
+#   name            : nom du compte Linux
+#   public_key_file : sa clé publique Ed25519, cherchée dans ansible/files/ (ex. cles-ssh/agent0.pub)
+
+git_server_root: /srv/git # Dossier qui contient les dépôts bare.
+git_server_owner: "{{ ansible_user }}" # Compte propriétaire des dépôts ; par défaut, l'administrateur utilisé par Ansible.
+git_server_group: agents # Groupe qui donne accès aux dépôts.
+git_server_group_gid: "" # Identifiant numérique du groupe ; vide = choisi par le système.
+git_server_repositories: [] # Dépôts bare (ex. homelab.git) déjà présents sous git_server_root.
+git_server_agents: [] # Comptes techniques autorisés ; vide = aucun accès SSH.

@@ -1,0 +1,5 @@
+# Interface du rôle nvidia_gpu : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+# Variable obligatoire, sans valeur par défaut :
+#   nvidia_gpu_driver_branch : branche du pilote Ubuntu validée avec la carte (ex. 595-open).
+
+nvidia_gpu_container_toolkit: true # Installe aussi NVIDIA Container Toolkit et le runtime Docker, pour donner le GPU aux conteneurs.

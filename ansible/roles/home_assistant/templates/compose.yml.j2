@@ -1,0 +1,37 @@
+# Géré par Ansible (rôle home_assistant) : modifier le rôle ou ses variables, pas ce fichier.
+services: # Conteneurs du projet Compose.
+  homeassistant: # Domotique et chef d'orchestre de la voix.
+    image: "{{ home_assistant_images.homeassistant }}" # Image fixée par digest dans les variables de l'hôte.
+    container_name: homeassistant # Nom fixe du conteneur.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    privileged: true # Accès aux périphériques de l'hôte (Bluetooth, USB).
+    network_mode: host # Partage le réseau de l'hôte : découverte des appareils et accès aux ports des autres services.
+    environment: # Variables d'environnement du conteneur.
+      - "TZ={{ home_assistant_timezone }}" # Fuseau horaire.
+    volumes: # Données persistantes.
+      - "{{ home_assistant_config_dir }}:/config" # Configuration et base de données.
+  whisper: # Reconnaissance vocale : voix vers texte, sur CPU.
+    image: "{{ home_assistant_images.whisper }}" # Image fixée par digest dans les variables de l'hôte.
+    container_name: whisper # Nom fixe du conteneur.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    ports: # Ports publiés sur l'hôte.
+      - "10300:10300" # Protocole Wyoming, utilisé par Home Assistant.
+    volumes: # Données persistantes.
+      - "{{ home_assistant_whisper_data_dir }}:/data" # Modèles téléchargés.
+    command: ["--model", "{{ home_assistant_whisper_model }}", "--language", "{{ home_assistant_language }}"] # Modèle et langue reconnus.
+  piper: # Synthèse vocale : texte vers voix, sur CPU.
+    image: "{{ home_assistant_images.piper }}" # Image fixée par digest dans les variables de l'hôte.
+    container_name: piper # Nom fixe du conteneur.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    ports: # Ports publiés sur l'hôte.
+      - "10200:10200" # Protocole Wyoming, utilisé par Home Assistant.
+    volumes: # Données persistantes.
+      - "{{ home_assistant_piper_data_dir }}:/data" # Voix téléchargées.
+    command: ["--voice", "{{ home_assistant_piper_voice }}"] # Voix utilisée.
+  openwakeword: # Détection du mot de réveil, sur CPU.
+    image: "{{ home_assistant_images.openwakeword }}" # Image fixée par digest dans les variables de l'hôte.
+    container_name: openwakeword # Nom fixe du conteneur.
+    restart: unless-stopped # Redémarre le conteneur sauf s'il a été arrêté volontairement.
+    ports: # Ports publiés sur l'hôte.
+      - "10400:10400" # Protocole Wyoming, utilisé par le satellite.
+    command: ["--preload-model", "{{ home_assistant_wake_word }}"] # Modèle de mot de réveil chargé au démarrage.

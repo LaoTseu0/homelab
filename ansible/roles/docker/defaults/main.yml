@@ -1,0 +1,15 @@
+# Interface du rôle docker : valeurs par défaut, remplaçables dans host_vars ou group_vars.
+
+docker_data_root: "" # Dossier des données du moteur Docker ; vide = emplacement par défaut (/var/lib/docker) et daemon.json non géré.
+docker_containerd_root: "" # Dossier des données de containerd ; vide = emplacement par défaut et config.toml non géré.
+docker_packages: # Paquets installés depuis le dépôt officiel Docker.
+  - docker-ce # Moteur qui exécute les conteneurs.
+  - docker-ce-cli # Commande docker.
+  - containerd.io # Runtime de bas niveau utilisé par Docker.
+  - docker-buildx-plugin # Outil de construction des images.
+  - docker-compose-plugin # Commande docker compose.
+  - python3-requests # Bibliothèque Python dont les modules community.docker ont besoin sur l'hôte.
+docker_conflicting_packages: # Paquets qui installent Docker autrement ; leur présence demande un audit avant remplacement.
+  - docker.io # Docker empaqueté par Debian ou Ubuntu.
+  - podman-docker # Commande docker fournie par Podman.
+  - containerd # containerd empaqueté par la distribution.

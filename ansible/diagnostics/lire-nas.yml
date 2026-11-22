@@ -1,0 +1,28 @@
+# Diagnostic en lecture seule : vérifie que /srv est bien le NVMe attendu.
+# Lancement depuis ansible/ : ansible-playbook -i inventory.yml diagnostics/lire-nas.yml --ask-vault-pass
+
+- name: Lire les informations du NAS # Description du play.
+  hosts: nas # Machine ciblée dans l'inventaire.
+  gather_facts: true # Fournit notamment le nom de la machine.
+
+  tasks: # Tâches du play.
+    - name: Afficher le nom de la machine # Confirme l'hôte joint.
+      ansible.builtin.debug: # Module qui affiche une valeur.
+        var: ansible_facts['hostname'] # Nom système relevé.
+
+    - name: Lire l'UUID monté sur /srv # Interroge le montage actif.
+      ansible.builtin.command: # Module qui exécute une commande sans shell.
+        argv: [findmnt, --mountpoint, /srv, --noheadings, --output, UUID] # Renvoie uniquement l'UUID.
+      register: montage_srv # Résultat de la commande.
+      changed_when: false # Cette lecture ne modifie rien.
+      check_mode: false # Lecture exécutée aussi en simulation.
+
+    - name: Afficher le montage trouvé # Affiche l'UUID relevé.
+      ansible.builtin.debug: # Module qui affiche une valeur.
+        var: montage_srv.stdout # Texte produit par findmnt.
+
+    - name: Vérifier que /srv utilise le NVMe attendu # Compare à l'UUID déclaré pour le rôle data_disk.
+      ansible.builtin.assert: # Module qui échoue si une condition est fausse.
+        that: montage_srv.stdout == data_disk_uuid # Les deux UUID doivent être identiques.
+        fail_msg: Le disque monté sur /srv ne correspond pas au NVMe attendu. # Message en cas d'échec.
+        success_msg: Le NVMe attendu est bien monté sur /srv. # Message en cas de réussite.
