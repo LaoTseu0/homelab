@@ -11,7 +11,7 @@
 | La livraison d’une nouvelle version d’image | [Publier une image](exploitation/publier-une-image.md) |
 | La reprise après la panne du NAS | [Remettre le NAS en service](exploitation/remettre-le-nas-en-service.md) |
 | Les raisons des choix techniques | [Décisions](decisions/) |
-| Les pistes d’évolution | [Messagerie](projets/messagerie.md) · [Pipeline CI/CD](projets/pipeline-ci-cd.md) |
+| Les pistes d’évolution | [Messagerie](projets/messagerie.md) · [Pipeline CI/CD](projets/pipeline-ci-cd.md) · [Machines virtuelles](projets/virtualisation.md) |
 
 ## Organisation
 
