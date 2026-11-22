@@ -15,7 +15,7 @@ La Bbox fournit l’accès Internet et le DHCP côté Maison. Le profil NetworkM
 | `lab-studio` | `enp4s0` | `192.168.50.252` | Dernier bail Homelab observé |
 | `jarvis-core` | À relever | À relever | Raccordement après la bascule à confirmer |
 
-Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côté Maison sont utilisées par le relais SMB. L’adresse du NAS est également utilisée par le registry et son certificat. Si elle change, les configurations concernées doivent suivre. [Variables HAProxy](../ansible/host_vars/lab-1.yml) · [Variables NAS](../ansible/host_vars/nas/main.yml) · [Inventaire Ansible](../ansible/inventory.yml)
+Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côté Maison sont utilisées par le relais SMB. L’adresse du NAS est également utilisée par le registry et son certificat. Si elle change, les configurations concernées doivent suivre. [Variables HAProxy](../../ansible/host_vars/lab-1.yml) · [Variables NAS](../../ansible/host_vars/nas/main.yml) · [Inventaire Ansible](../../ansible/inventory.yml)
 
 ## Flux
 
@@ -33,7 +33,7 @@ Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côt
 | `lab-studio` | 11434/TCP | API Ollama, publiée par Compose |
 | `lab-studio` | 10200, 10300, 10400/TCP | Piper, Whisper et openWakeWord, publiés par Compose |
 
-Ce tableau décrit les flux configurés et les accès confirmés. Les ports publiés par Compose ne prouvent pas la présence de restrictions par IP. Le satellite audio est actuellement à l’arrêt. Compose de la tour : [Ollama](../ansible/roles/ollama/templates/compose.yml.j2) · [Home Assistant](../ansible/roles/home_assistant/templates/compose.yml.j2)
+Ce tableau décrit les flux configurés et les accès confirmés. Les ports publiés par Compose ne prouvent pas la présence de restrictions par IP. Le satellite audio est actuellement à l’arrêt. Compose de la tour : [Ollama](../../ansible/roles/ollama/templates/compose.yml.j2) · [Home Assistant](../../ansible/roles/home_assistant/templates/compose.yml.j2)
 
 ### Accès Samba via le relais
 

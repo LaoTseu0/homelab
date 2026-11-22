@@ -1,5 +1,5 @@
 # Variables de la tour GPU (lab-studio).
-# Les images sont publiées sous studio/ dans le registry du NAS et référencées par digest (voir doc/exploitation.md).
+# Les images sont publiées sous studio/ dans le registry du NAS et référencées par digest (voir doc/exploitation/publier-une-image.md).
 
 nvidia_gpu_driver_branch: 595-open # Branche du pilote Ubuntu validée avec la RTX 2060.
 

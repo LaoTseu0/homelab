@@ -16,7 +16,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 | Stockage | SSD NVMe Micron 2400 `MTFDKBA512QFM`, 512 110 190 592 octets (~477 Gio) |
 | Interfaces réseau | Realtek PCIe GbE Family Controller, Intel Wi-Fi 6 AX201 160 MHz |
 | Système | Windows 11 Famille x64, version système `10.0.26200` |
-| Control node | Ubuntu sous WSL 2. [Versions et installation de Python et Ansible](exploitation.md#depuis-le-pc-admin) |
+| Control node | Ubuntu sous WSL 2. [Versions et installation de Python et Ansible](../exploitation/deployer.md#depuis-le-pc-admin) |
 
 ## NAS — `nas`
 
@@ -29,7 +29,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 | Châssis et alimentation | Boîtier, refroidissement, bloc d’alimentation et modèle microSD à relever |
 | Système | Raspberry Pi OS 64 bits, base Debian Trixie. Version du noyau à relever |
 | Moteur de conteneurs | Docker Engine `29.10.0`, Compose `v5.8.0`, stockage `overlayfs` au dernier relevé. Les contrôleurs mémoire et swap ont été vérifiés actifs ensuite |
-| Services | Samba et Git sur l’hôte. Registry Distribution conteneurisé. Rôles appliqués dans le [profil du NAS](../ansible/configurer-nas.yml), réglages dans les [variables NAS](../ansible/host_vars/nas/main.yml) |
+| Services | Samba et Git sur l’hôte. Registry Distribution conteneurisé. Rôles appliqués dans le [profil du NAS](../../ansible/configurer-nas.yml), réglages dans les [variables NAS](../../ansible/host_vars/nas/main.yml) |
 
 ## Passerelle — `lab-rpi4-1`
 

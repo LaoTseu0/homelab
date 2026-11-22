@@ -12,3 +12,6 @@ __pycache__/
 # Secrets et rapports locaux d’administration hors Git.
 ansible/secrets/
 ansible/rapports/
+
+# Notes personnelles : plan de sécurité et préparation aux entretiens, jamais publiées.
+doc/prive/
