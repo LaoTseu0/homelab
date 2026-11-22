@@ -1,6 +1,6 @@
 # 001 — Découper les rôles Ansible par fonction
 
-**Statut :** accepté, déploiement sur les machines à réaliser.
+**Statut :** accepté, déployé sur les machines le 22 novembre 2026.
 **Date :** novembre 2026.
 
 ## Contexte

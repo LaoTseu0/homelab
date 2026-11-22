@@ -9,9 +9,8 @@ __pycache__/
 # Config locale de l'éditeur Obsidian (préférences machine, pas de la doc)
 .obsidian/
 
-# Secrets et rapports locaux d’administration hors Git.
+# Secrets locaux d’administration hors Git.
 ansible/secrets/
-ansible/rapports/
 
 # Notes personnelles : plan de sécurité et préparation aux entretiens, jamais publiées.
 doc/prive/

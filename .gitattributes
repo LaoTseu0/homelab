@@ -7,3 +7,5 @@
 *.j2           text eol=lf
 *.pub          text eol=lf
 *authorized_keys text eol=lf
+# Ce fichier est lu par Git sous Windows et sous WSL : il garde les mêmes fins de ligne partout.
+.gitattributes text eol=lf

@@ -37,7 +37,7 @@
     that: # Conditions à respecter.
       - (ollama_container.Config.Labels or {}).get('com.docker.compose.project', '') == ollama_project # Le conteneur appartient au même projet Compose.
       - ollama_volume in (ollama_container.Mounts | selectattr('Destination', 'equalto', '/root/.ollama') | map(attribute='Name') | list) # Il utilise le même volume de modèles.
-    fail_msg: "Le conteneur ollama existe hors du projet {{ ollama_project }} ou avec un autre volume. Arrêter l'ancien projet (voir migrations/) avant de redéployer." # Message affiché en cas d'échec.
+    fail_msg: "Le conteneur ollama existe hors du projet {{ ollama_project }} ou avec un autre volume. Arrêter l'autre projet Compose (docker compose -p <nom> down) avant de redéployer." # Message affiché en cas d'échec.
   vars: # Variables propres à cette tâche.
     ollama_container: "{{ (ollama_current.stdout | from_json)[0] }}" # Premier et seul objet renvoyé par docker inspect.
   when: ollama_current is not skipped # Seulement si le conteneur existe.

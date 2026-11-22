@@ -29,7 +29,7 @@
     that: # Conditions à respecter.
       - (container.Config.Labels or {}).get('com.docker.compose.project', '') == home_assistant_project # Le conteneur appartient au même projet Compose.
       - item.item not in home_assistant_expected_mounts or expected.source in (container.Mounts | selectattr('Destination', 'equalto', expected.target) | map(attribute='Source') | list) # Il monte le même dossier de données.
-    fail_msg: "Le conteneur {{ item.item }} existe hors du projet {{ home_assistant_project }} ou avec un autre dossier de données. Arrêter l'ancien projet (voir migrations/) avant de redéployer." # Message propre au conteneur.
+    fail_msg: "Le conteneur {{ item.item }} existe hors du projet {{ home_assistant_project }} ou avec un autre dossier de données. Arrêter l'autre projet Compose (docker compose -p <nom> down) avant de redéployer." # Message propre au conteneur.
   vars: # Variables propres à cette tâche.
     container: "{{ (item.stdout | from_json)[0] }}" # Premier et seul objet renvoyé par docker inspect.
     expected: "{{ home_assistant_expected_mounts[item.item] | default({}) }}" # Montage attendu, s'il y en a un.
