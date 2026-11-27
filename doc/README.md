@@ -10,6 +10,7 @@
 | Les commandes pour préparer le poste et déployer | [Déployer](exploitation/deployer.md) |
 | La livraison d’une nouvelle version d’image | [Publier une image](exploitation/publier-une-image.md) |
 | La reprise après la panne du NAS | [Remettre le NAS en service](exploitation/remettre-le-nas-en-service.md) |
+| Ce qui donne root et la reprise d’un mot de passe perdu | [Sécurité des accès](exploitation/securite.md) |
 | Les raisons des choix techniques | [Décisions](decisions/) |
 | Les pistes d’évolution | [Messagerie](projets/messagerie.md) · [Pipeline CI/CD](projets/pipeline-ci-cd.md) · [Machines virtuelles](projets/virtualisation.md) |
 

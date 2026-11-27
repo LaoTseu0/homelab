@@ -1,6 +1,6 @@
 # Machines
 
-Relevé consolidé le 19 novembre 2026. Les caractéristiques ci-dessous proviennent de relevés système, de tests réalisés dans le lab ou de la configuration Ansible en vigueur. Les valeurs marquées **à relever** restent à confirmer sur le matériel. Pour l’adressage et les ports, voir [Réseau](reseau.md).
+Relevé consolidé le 19 novembre 2026, complété le 27 novembre pour `jarvis-core`. Les caractéristiques ci-dessous proviennent de relevés système, de tests réalisés dans le lab ou de la configuration Ansible en vigueur. Les valeurs marquées **à relever** restent à confirmer sur le matériel. Pour l’adressage et les ports, voir [Réseau](reseau.md).
 
 ## PC admin — `DESKTOP-61C28MN`
 
@@ -52,15 +52,30 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 
 ## Seconde tour — `jarvis-core`
 
-Le raccordement au Homelab et l’état de la tour depuis la bascule réseau restent à vérifier. Le relevé doit couvrir le nom système, l’OS, la carte mère et le firmware, le CPU, la RAM par module, les GPU et leur VRAM, les disques et leurs contrôleurs, les interfaces réseau, l’alimentation, le refroidissement et les services actifs.
+Relevé effectué par SSH le 27 novembre 2026, sans sudo. La tour n’est pas encore dans l’inventaire Ansible : son nom définitif reste à choisir.
+
+| Élément | Relevé |
+|---|---|
+| Carte mère et firmware | MSI `MS-7D75` rév. 1.0, firmware `1.Q0` du 19 mai 2026. Nom commercial de la carte à confirmer |
+| Processeur | AMD Ryzen 9 7900X, 12 cœurs et 24 threads. Virtualisation AMD-V disponible |
+| RAM | 60 Gio visibles, soit probablement 64 Gio installés. Swap de 8 Gio. Modules à relever avec `sudo dmidecode -t memory` |
+| GPU | NVIDIA GeForce RTX 4090 (AD102) en `01:00.0`. iGPU AMD Raphael en `10:00.0`. `nvidia-smi` ne répond pas : pilote NVIDIA probablement absent |
+| Stockage | NVMe WD_BLACK SN850X HS 4 To : `/boot/efi` (1 Gio), `/boot` (2 Gio) et un PV LVM `ubuntu-vg`. Les volumes logiques sont `ubuntu-lv` (200 Gio sur `/`, 11 Gio utilisés) et `models-lv` (3 Tio sur `/data/models`, vide). Espace libre du VG à relever avec `vgs`. Pas de chiffrement |
+| Contrôleurs | Deux contrôleurs SATA : AMD 600 Series et ASMedia ASM1061/1062. Aucun disque SATA détecté |
+| Interfaces réseau | Realtek RTL8125 2.5GbE `enp12s0`, active. Wi-Fi `wlp13s0`, inactive |
+| Système | Ubuntu 26.04 LTS, x86-64, noyau `7.0.0-28-generic`. Réseau géré par systemd-networkd |
+| Services | Installation de base : SSH, chrony, cron, unattended-upgrades. Ni Docker ni service applicatif |
+| Accès | SSH par clé, compte `jcore`, membre du groupe `sudo`. **Mot de passe sudo perdu** : procédure dans [Sécurité](../exploitation/securite.md#réinitialiser-un-mot-de-passe-perdu) |
+| Historique | Dernière connexion avant le relevé le 18 juillet 2026, depuis `192.168.1.200` sur le réseau Maison |
+| À relever | Modules RAM, IOMMU, configuration SSH effective, espace libre LVM, alimentation, boîtier et refroidissement. Ces relevés demandent sudo |
 
 ## Équipements réseau
 
 | Équipement | État relevé |
 |---|---|
 | Bbox | Routeur du réseau Maison. Modèle exact et firmware à relever |
-| TP-Link TL-SG108PE | Switch Ethernet du Homelab. Révision matérielle et firmware à relever |
+| TP-Link TL-SG108PE | Switch Ethernet du Homelab. Interface d’administration probablement en `192.168.50.232`, à confirmer. Révision matérielle et firmware à relever |
 
 ## Compléter les relevés
 
-Depuis le dossier Ansible sous WSL, lancer `ansible-playbook -i inventory.yml diagnostics/inventorier.yml --ask-vault-pass`. Le playbook relève la distribution, le noyau, le CPU, la RAM visible, les disques, les interfaces et les composants PCI/USB détectés. Il utilise les accès SSH existants. Les références de l’alimentation, du HAT et du refroidissement se vérifient sur les étiquettes ou les composants. La seconde tour pourra être relevée une fois son accès SSH établi.
+Depuis le dossier Ansible sous WSL, lancer `ansible-playbook -i inventory.yml diagnostics/inventorier.yml --ask-vault-pass`. Le playbook relève la distribution, le noyau, le CPU, la RAM visible, les disques, les interfaces et les composants PCI/USB détectés. Il utilise les accès SSH existants. Les références de l’alimentation, du HAT et du refroidissement se vérifient sur les étiquettes ou les composants. La seconde tour pourra être relevée ainsi une fois ajoutée à l’inventaire, avec un mot de passe sudo valide.

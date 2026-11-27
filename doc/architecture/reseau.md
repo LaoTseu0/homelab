@@ -13,7 +13,8 @@ La Bbox fournit l’accès Internet et le DHCP côté Maison. Le profil NetworkM
 | NAS | Ethernet | `192.168.50.198` | Dernier bail Homelab observé |
 | PC admin | Ethernet | `192.168.50.68` | Dernier bail Homelab observé |
 | `lab-studio` | `enp4s0` | `192.168.50.252` | Dernier bail Homelab observé |
-| `jarvis-core` | À relever | À relever | Raccordement après la bascule à confirmer |
+| `jarvis-core` | `enp12s0` | `192.168.50.135` | Bail Homelab observé le 27 novembre 2026, MAC `d8:43:ae:ba:d9:32` |
+| Switch TL-SG108PE | Administration | `192.168.50.232` | Bail Homelab observé, MAC TP-Link `30:68:93:1e:1a:54`. Correspondance avec le switch à confirmer |
 
 Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côté Maison sont utilisées par le relais SMB. L’adresse du NAS est également utilisée par le registry et son certificat. Si elle change, les configurations concernées doivent suivre. [Variables HAProxy](../../ansible/host_vars/lab-1.yml) · [Variables NAS](../../ansible/host_vars/nas/main.yml) · [Inventaire Ansible](../../ansible/inventory.yml)
 
@@ -29,6 +30,7 @@ Les réservations DHCP restent à confirmer. Les adresses du NAS et du Pi 4 côt
 | NAS | 5000/TCP, TLS | Registry de publication. Le compte `publisher` peut publier et lire les images |
 | NAS | 5001/TCP, TLS | Registry de téléchargement. Lecture confirmée depuis `lab-studio` |
 | `lab-studio` | 22/TCP | Administration SSH depuis le PC admin |
+| `jarvis-core` | 22/TCP | Administration SSH depuis le PC admin, avec l’alias `jcore` du `~/.ssh/config` Windows. Pas encore d’alias côté WSL |
 | `lab-studio` | 8123/TCP | Interface Home Assistant. Accès depuis le PC admin via `http://192.168.50.252:8123` |
 | `lab-studio` | 11434/TCP | API Ollama, publiée par Compose |
 | `lab-studio` | 10200, 10300, 10400/TCP | Piper, Whisper et openWakeWord, publiés par Compose |

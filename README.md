@@ -11,6 +11,7 @@ Le homelab s’administre depuis le PC Windows. Ubuntu sous WSL exécute Ansible
 | Les dossiers de données, le montage du NVMe et leur gestion | [Volumes](doc/architecture/volumes.md) |
 | Les commandes de déploiement | [Déployer](doc/exploitation/deployer.md) |
 | La publication d’une image et la remise en service | [Publier une image](doc/exploitation/publier-une-image.md) · [Remettre le NAS en service](doc/exploitation/remettre-le-nas-en-service.md) |
+| Les chemins vers root et la reprise d’un mot de passe perdu | [Sécurité des accès](doc/exploitation/securite.md) |
 | Les choix techniques et les pistes d’évolution | [Sommaire complet de la documentation](doc/README.md) |
 
 La configuration déployable se trouve dans [`ansible/`](ansible/). L’[inventaire](ansible/inventory.yml) indique les cibles SSH, [`group_vars/`](ansible/group_vars/) et [`host_vars/`](ansible/host_vars/) contiennent leurs variables. [`roles/`](ansible/roles/) rassemble des rôles réutilisables, un par fonction (Samba, Docker, Ollama…), et chaque playbook `configurer-*.yml` est le profil d’une machine : la liste des rôles qu’elle reçoit.
