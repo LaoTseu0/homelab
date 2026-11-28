@@ -29,6 +29,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 | Châssis et alimentation | Boîtier, refroidissement, bloc d’alimentation et modèle microSD à relever |
 | Système | Raspberry Pi OS 64 bits, base Debian Trixie. Version du noyau à relever |
 | Moteur de conteneurs | Docker Engine `29.10.0`, Compose `v5.8.0`, stockage `overlayfs` au dernier relevé. Les contrôleurs mémoire et swap ont été vérifiés actifs ensuite |
+| Rôle | L’état du homelab, dont le second cerveau versionné dans Git. Voir la [décision 002](../decisions/002-repartition-des-roles.md) |
 | Services | Samba et Git sur l’hôte. Registry Distribution conteneurisé. Rôles appliqués dans le [profil du NAS](../../ansible/configurer-nas.yml), réglages dans les [variables NAS](../../ansible/host_vars/nas/main.yml) |
 
 ## Passerelle — `lab-rpi4-1`
@@ -44,6 +45,7 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 
 | Élément | Relevé |
 |---|---|
+| Rôle | Orchestration, toujours allumée : harness (cible), Home Assistant et petit modèle sur la 2060. Voir la [décision 002](../decisions/002-repartition-des-roles.md) |
 | Système | Ubuntu 26.04, x86-64. Noyau `7.0.0-42-generic` observé au rétablissement d’Ollama |
 | GPU | NVIDIA GeForce RTX 2060 Rev. A, TU106, ID PCI `10de:1f08`, 6 144 Mio. Pilote `595.99.02` et branche Ubuntu `595-open` validés le 18 novembre |
 | Périphérique audio | ReSpeaker XVF3800 en USB, actuellement débranché. L’unité `wyoming-satellite` est gérée par Ansible |
@@ -56,6 +58,7 @@ Anciennement `jarvis-core`. Ubuntu Server a été réinstallé le 28 novembre 20
 
 | Élément | Relevé |
 |---|---|
+| Rôle | Calcul sans état : moteur LLM pour les gros modèles et essais de modèles. Voir la [décision 002](../decisions/002-repartition-des-roles.md) |
 | Carte mère et firmware | MSI MAG B650 TOMAHAWK WIFI (`MS-7D75`) rév. 1.0, firmware `1.Q0` du 19 mai 2026 |
 | Processeur | AMD Ryzen 9 7900X, 12 cœurs et 24 threads. Virtualisation AMD-V disponible |
 | RAM | 64 Go en 2 × 32 Go DDR5 Corsair `CMH64GX5M2B6000Z30`, à 6 000 MT/s configurés. 60 Gio visibles. Swap de 8 Gio |

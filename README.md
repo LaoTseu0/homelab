@@ -9,6 +9,7 @@ Le homelab s’administre depuis le PC Windows. Ubuntu sous WSL exécute Ansible
 | Les adresses IP, les ports et les accès Samba | [Réseau](doc/architecture/reseau.md) |
 | Le matériel, les systèmes et les relevés à compléter | [Machines](doc/architecture/machines.md) |
 | Les dossiers de données, le montage du NVMe et leur gestion | [Volumes](doc/architecture/volumes.md) |
+| Le rôle de chaque machine et le chemin des requêtes jusqu’aux modèles | [Répartition des rôles](doc/decisions/002-repartition-des-roles.md) · [Parcours des requêtes](doc/architecture/parcours-des-requetes.md) |
 | Les commandes de déploiement | [Déployer](doc/exploitation/deployer.md) |
 | La publication d’une image et la remise en service | [Publier une image](doc/exploitation/publier-une-image.md) · [Remettre le NAS en service](doc/exploitation/remettre-le-nas-en-service.md) |
 | Les chemins vers root et la reprise d’un mot de passe perdu | [Sécurité des accès](doc/exploitation/securite.md) |

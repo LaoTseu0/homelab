@@ -7,6 +7,7 @@
 | Les adresses, les ports et les accès Samba | [Réseau](architecture/reseau.md) |
 | Le matériel, les systèmes et les relevés à compléter | [Machines](architecture/machines.md) |
 | Les dossiers de données et le montage du NVMe | [Volumes](architecture/volumes.md) |
+| Le chemin d’une requête texte ou vocale jusqu’au modèle | [Parcours des requêtes](architecture/parcours-des-requetes.md) |
 | Les commandes pour préparer le poste et déployer | [Déployer](exploitation/deployer.md) |
 | La livraison d’une nouvelle version d’image | [Publier une image](exploitation/publier-une-image.md) |
 | La reprise après la panne du NAS | [Remettre le NAS en service](exploitation/remettre-le-nas-en-service.md) |
