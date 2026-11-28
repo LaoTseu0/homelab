@@ -20,13 +20,13 @@ flowchart TD
         admin["PC admin · Windows et WSL"]
         nas["NAS · Pi 5"]
         studio["lab-studio"]
-        jcore["jarvis-core"]
+        forge["lab-forge"]
     end
 
     admin -->|"Accès Internet et DNS"| routage
     nas -->|"Accès Internet et DNS"| routage
     studio -->|"Accès Internet et DNS"| routage
-    jcore -->|"Accès Internet et DNS"| routage
+    forge -->|"Accès Internet et DNS"| routage
     routage --> bbox
     bbox --> internet
     phones -->|"SMB"| proxy
@@ -34,7 +34,7 @@ flowchart TD
     admin -->|"SSH Ansible et SMB direct"| nas
     admin -->|"SSH Ansible"| passerelle
     admin -->|"SSH Ansible et interfaces web"| studio
-    admin -->|"SSH"| jcore
+    admin -->|"SSH"| forge
     studio -->|"Git sur SSH et pull du registry en TLS"| nas
 ```
 

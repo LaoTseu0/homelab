@@ -13,3 +13,6 @@ all: # Groupe intégré qui englobe tous les hôtes de l'inventaire.
       ansible_host: 192.168.50.252 # Adresse IPv4 actuelle de la tour sur le réseau Homelab.
       ansible_user: studio # Compte Linux utilisé par SSH sur la tour.
       ansible_ssh_private_key_file: ~/.ssh/id_ed25519_jarvis_central # Clé privée sur le control node WSL ; nom à changer lors de la rotation de la clé.
+    lab-forge: # Nom Ansible de la seconde tour GPU (RTX 4090). Pas encore de profil configurer-*.yml.
+      ansible_host: lab-forge # Destination SSH : l'alias Host lab-forge, qui définit l'adresse et la clé dans Ubuntu/WSL.
+      ansible_user: forge # Compte Linux utilisé par SSH sur la tour.

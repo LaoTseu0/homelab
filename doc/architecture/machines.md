@@ -1,6 +1,6 @@
 # Machines
 
-Relevé consolidé le 19 novembre 2026, complété le 27 novembre pour `jarvis-core`. Les caractéristiques ci-dessous proviennent de relevés système, de tests réalisés dans le lab ou de la configuration Ansible en vigueur. Les valeurs marquées **à relever** restent à confirmer sur le matériel. Pour l’adressage et les ports, voir [Réseau](reseau.md).
+Relevé consolidé le 19 novembre 2026, complété le 28 novembre pour `lab-forge`. Les caractéristiques ci-dessous proviennent de relevés système, de tests réalisés dans le lab ou de la configuration Ansible en vigueur. Les valeurs marquées **à relever** restent à confirmer sur le matériel. Pour l’adressage et les ports, voir [Réseau](reseau.md).
 
 ## PC admin — `DESKTOP-61C28MN`
 
@@ -50,24 +50,24 @@ Relevé effectué directement sous Windows le 19 novembre 2026.
 | Services | Home Assistant, Ollama, Whisper, Piper et openWakeWord |
 | À relever | Modèle CPU exact, RAM et références des modules, carte mère, BIOS, stockage, contrôleur Ethernet, alimentation, boîtier, refroidissement et versions Docker/Compose |
 
-## Seconde tour — `jarvis-core`
+## Seconde tour — `lab-forge`
 
-Relevé effectué par SSH le 27 novembre 2026, sans sudo. La tour n’est pas encore dans l’inventaire Ansible : son nom définitif reste à choisir.
+Anciennement `jarvis-core`. Ubuntu Server a été réinstallé le 28 novembre 2026, et le relevé a été fait le même jour par SSH, avec sudo. La tour est dans l’[inventaire Ansible](../../ansible/inventory.yml), sans profil `configurer-*.yml` pour l’instant : aucun rôle ne lui est encore appliqué.
 
 | Élément | Relevé |
 |---|---|
-| Carte mère et firmware | MSI `MS-7D75` rév. 1.0, firmware `1.Q0` du 19 mai 2026. Nom commercial de la carte à confirmer |
+| Carte mère et firmware | MSI MAG B650 TOMAHAWK WIFI (`MS-7D75`) rév. 1.0, firmware `1.Q0` du 19 mai 2026 |
 | Processeur | AMD Ryzen 9 7900X, 12 cœurs et 24 threads. Virtualisation AMD-V disponible |
-| RAM | 60 Gio visibles, soit probablement 64 Gio installés. Swap de 8 Gio. Modules à relever avec `sudo dmidecode -t memory` |
-| GPU | NVIDIA GeForce RTX 4090 (AD102) en `01:00.0`. iGPU AMD Raphael en `10:00.0`. `nvidia-smi` ne répond pas : pilote NVIDIA probablement absent |
-| Stockage | NVMe WD_BLACK SN850X HS 4 To : `/boot/efi` (1 Gio), `/boot` (2 Gio) et un PV LVM `ubuntu-vg`. Les volumes logiques sont `ubuntu-lv` (200 Gio sur `/`, 11 Gio utilisés) et `models-lv` (3 Tio sur `/data/models`, vide). Espace libre du VG à relever avec `vgs`. Pas de chiffrement |
-| Contrôleurs | Deux contrôleurs SATA : AMD 600 Series et ASMedia ASM1061/1062. Aucun disque SATA détecté |
+| RAM | 64 Go en 2 × 32 Go DDR5 Corsair `CMH64GX5M2B6000Z30`, à 6 000 MT/s configurés. 60 Gio visibles. Swap de 8 Gio |
+| GPU | NVIDIA GeForce RTX 4090 (AD102) en `01:00.0`, sans pilote installé. iGPU AMD Raphael en `10:00.0` pour la console |
+| IOMMU | AMD-Vi détecté au démarrage. Groupes IOMMU à vérifier avant un passthrough avec `ls /sys/kernel/iommu_groups` |
+| Stockage | NVMe WD_BLACK SN850X HS 4 To : `/boot/efi` (1 Gio), `/boot` (2 Gio) et un PV LVM `ubuntu-vg` de 3,6 Tio. Seul `ubuntu-lv` existe : 100 Gio sur `/`, 12 Gio utilisés. Le reste du VG est libre pour de futurs volumes. Pas de chiffrement |
+| Contrôleurs | Deux contrôleurs SATA : AMD 600 Series et ASMedia ASM1061/1062. Aucun disque SATA branché |
 | Interfaces réseau | Realtek RTL8125 2.5GbE `enp12s0`, active. Wi-Fi `wlp13s0`, inactive |
-| Système | Ubuntu 26.04 LTS, x86-64, noyau `7.0.0-28-generic`. Réseau géré par systemd-networkd |
-| Services | Installation de base : SSH, chrony, cron, unattended-upgrades. Ni Docker ni service applicatif |
-| Accès | SSH par clé, compte `jcore`, membre du groupe `sudo`. **Mot de passe sudo perdu** : procédure dans [Sécurité](../exploitation/securite.md#réinitialiser-un-mot-de-passe-perdu) |
-| Historique | Dernière connexion avant le relevé le 18 juillet 2026, depuis `192.168.1.200` sur le réseau Maison |
-| À relever | Modules RAM, IOMMU, configuration SSH effective, espace libre LVM, alimentation, boîtier et refroidissement. Ces relevés demandent sudo |
+| Système | Ubuntu Server 26.04.1 LTS, x86-64, noyau `7.0.0-44-generic`. Réseau géré par systemd-networkd. Snaps de base seulement (`core24`, `snapd`, `hwctl`) |
+| Services | Installation de base : SSH, chrony, cron, fwupd, unattended-upgrades. Ni Docker ni service applicatif |
+| Accès | Compte `forge`, membre du groupe `sudo`. Clés SSH distinctes pour Windows et WSL, alias `lab-forge` des deux côtés. L’authentification SSH par mot de passe est encore active : voir [Sécurité](../exploitation/securite.md#état-des-machines) |
+| À relever | Alimentation, boîtier et refroidissement |
 
 ## Équipements réseau
 
@@ -78,4 +78,4 @@ Relevé effectué par SSH le 27 novembre 2026, sans sudo. La tour n’est pas en
 
 ## Compléter les relevés
 
-Depuis le dossier Ansible sous WSL, lancer `ansible-playbook -i inventory.yml diagnostics/inventorier.yml --ask-vault-pass`. Le playbook relève la distribution, le noyau, le CPU, la RAM visible, les disques, les interfaces et les composants PCI/USB détectés. Il utilise les accès SSH existants. Les références de l’alimentation, du HAT et du refroidissement se vérifient sur les étiquettes ou les composants. La seconde tour pourra être relevée ainsi une fois ajoutée à l’inventaire, avec un mot de passe sudo valide.
+Depuis le dossier Ansible sous WSL, lancer `ansible-playbook -i inventory.yml diagnostics/inventorier.yml --ask-vault-pass`. Le playbook relève la distribution, le noyau, le CPU, la RAM visible, les disques, les interfaces et les composants PCI/USB détectés. Il utilise les accès SSH existants. Les références de l’alimentation, du HAT et du refroidissement se vérifient sur les étiquettes ou les composants.

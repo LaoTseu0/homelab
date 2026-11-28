@@ -30,7 +30,7 @@ Les coûts : RAM et disque réservés, un OS de plus à mettre à jour par VM et
 
 ## Cible proposée
 
-Garder la production telle quelle et installer **Proxmox sur la seconde tour**. D’après le relevé du 27 novembre 2026 dans [Machines](../architecture/machines.md#seconde-tour--jarvis-core), son matériel s’y prête : Ryzen 9 7900X avec AMD-V, environ 64 Gio de RAM, NVMe de 4 To. Sa RTX 4090 de 24 Gio pourrait être confiée à une VM par passthrough, si l’IOMMU est actif, ce qui reste à vérifier. Le disque porte une installation Ubuntu presque vide, que Proxmox remplacerait.
+Garder la production telle quelle et installer **Proxmox sur la seconde tour**. D’après le relevé du 28 novembre 2026 dans [Machines](../architecture/machines.md#seconde-tour--lab-forge), son matériel s’y prête : Ryzen 9 7900X avec AMD-V, 64 Go de RAM, NVMe de 4 To. Sa RTX 4090 de 24 Gio pourrait être confiée à une VM par passthrough : AMD-Vi est détecté, les groupes IOMMU restent à vérifier. La tour porte depuis le 28 novembre 2026 un Ubuntu Server neuf, nommé `lab-forge`, que Proxmox remplacerait.
 
 | VM | Rôle | Limite |
 |---|---|---|
